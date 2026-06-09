@@ -1,0 +1,10 @@
+{
+  "name": "allenamento-ascolto",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web app di allenamento uditivo per portatori di impianto cocleare.",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,19 @@
+# dipendenze
+node_modules/
+
+# variabili d'ambiente (mai committare le chiavi!)
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel/
+
+# strumenti locali Claude Code (preview, settings locali)
+.claude/
+
+# log e file di sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
