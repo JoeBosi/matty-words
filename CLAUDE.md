@@ -12,6 +12,8 @@ da affiancare al lavoro di logopedista/audiologo; gli esercizi andrebbero valida
     **NESSUNA chiave**, nessuna fatturazione.
   - `lib/tts.mjs` — nucleo TTS condiviso (Vercel + dev-server), usa il pacchetto `msedge-tts`.
   - `scripts/dev-server.mjs` — server locale che replica `/api/tts` (con "clean URL").
+  - **PWA**: `manifest.webmanifest`, `sw.js` (service worker), `icons/`. Installabile,
+    avvio a schermo intero; il SW mette in cache la shell + font + audio umani (offline).
 - Audio, in ordine di priorità:
   - **PAROLE**: registrazioni **umane reali** da **Lingua Libre/Wikimedia Commons**
     (Q652 = italiano), cercate al volo, **normalizzate in volume** (RMS + tetto picco)

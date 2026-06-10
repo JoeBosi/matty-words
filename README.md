@@ -43,7 +43,22 @@ prova-voci.html       → pagina per provare/scegliere le voci e le sillabe
 api/tts.js            → funzione serverless Vercel: testo+voce → MP3 (Microsoft)
 lib/tts.mjs           → nucleo TTS condiviso (pacchetto msedge-tts)
 scripts/dev-server.mjs→ server locale che replica /api/tts per lo sviluppo
+manifest.webmanifest  → PWA: nome, icone, schermo intero
+sw.js                 → service worker: cache offline (shell + font + audio umani)
+icons/                → icone dell'app (192, 512, maskable, apple-touch)
 ```
+
+## App installabile (PWA)
+
+L'app è una **Progressive Web App**: si può installare sul telefono o sul PC e si
+avvia a schermo intero come un'app normale, con la sua icona.
+
+- **Android / Chrome / Edge**: apri il sito → menu → *Installa app* / *Aggiungi a schermo Home*.
+- **iPhone / iPad (Safari)**: apri il sito → *Condividi* → *Aggiungi a Home*.
+
+Il service worker tiene in cache l'interfaccia, i font e le **registrazioni umane già
+ascoltate**, così l'app si apre e le parole già usate si sentono **anche offline**.
+(La sintesi neurale di parole/sillabe nuove richiede la rete.)
 
 ## 1) Avvio in locale
 
