@@ -5,7 +5,7 @@
 // - NON intercetta le richieste POST (es. /api/tts): vanno sempre in rete; se offline,
 //   l'app ripiega da sola sulla voce del dispositivo.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL = "shell-" + VERSION;
 const RUNTIME = "runtime-" + VERSION;
 

@@ -303,17 +303,20 @@
   var engineBadge=$("engineBadge"), engineText=$("engineText"), engineBox=$("engineBox");
 
   // ---------- Web Audio (volume tramite GainNode: funziona anche su iOS) ----------
-  var audioCtx=null, masterGain=null, currentSource=null;
+  var audioCtx=null, masterGain=null, currentSource=null, unlockPromise=null;
   function ensureAudio(){
     if(!audioCtx){
       var AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return;
+      if(!AC) return null;
       audioCtx = new AC();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
       masterGain.connect(audioCtx.destination);
     }
-    if(audioCtx.state==="suspended"){ audioCtx.resume(); }
+    // iOS sospende il contesto tra un suono e l'altro: va riattivato DENTRO il gesto
+    // dell'utente. Conserviamo la promise così possiamo attendere il risveglio prima di suonare.
+    if(audioCtx.state !== "running"){ unlockPromise = audioCtx.resume().catch(function(){}); }
+    return unlockPromise;
   }
   function setVolume(v){
     volume=v;
@@ -415,8 +418,11 @@
                             : "Voce del dispositivo";
   }
 
-  function playBuffer(audioBuf, mid, after, clipGain){
+  async function playBuffer(audioBuf, mid, after, clipGain){
     stopCurrent();
+    // FIX iOS: assicura che il contesto sia attivo prima di suonare, altrimenti il
+    // secondo suono (in cache, istantaneo) partirebbe su un contesto sospeso = silenzio.
+    if(audioCtx.state !== "running"){ try{ await (unlockPromise || audioCtx.resume()); }catch(e){} }
     var src = audioCtx.createBufferSource();
     src.buffer = audioBuf;
     if(clipGain && clipGain!==1){
