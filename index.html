@@ -303,20 +303,27 @@
   var engineBadge=$("engineBadge"), engineText=$("engineText"), engineBox=$("engineBox");
 
   // ---------- Web Audio (volume tramite GainNode: funziona anche su iOS) ----------
-  var audioCtx=null, masterGain=null, currentSource=null, unlockPromise=null;
+  var audioCtx=null, masterGain=null, currentSource=null, audioUnlocked=false;
+  // Va chiamata DENTRO un gesto dell'utente (tap/tasto): crea il contesto al primo
+  // tocco e lo sblocca suonando un buffer muto — è il metodo che funziona su iOS.
   function ensureAudio(){
     if(!audioCtx){
       var AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return null;
+      if(!AC) return;
       audioCtx = new AC();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
       masterGain.connect(audioCtx.destination);
     }
-    // iOS sospende il contesto tra un suono e l'altro: va riattivato DENTRO il gesto
-    // dell'utente. Conserviamo la promise così possiamo attendere il risveglio prima di suonare.
-    if(audioCtx.state !== "running"){ unlockPromise = audioCtx.resume().catch(function(){}); }
-    return unlockPromise;
+    if(audioCtx.state !== "running"){ audioCtx.resume(); }
+    if(!audioUnlocked){
+      try{
+        var b = audioCtx.createBuffer(1, 1, 22050);
+        var s = audioCtx.createBufferSource();
+        s.buffer = b; s.connect(masterGain); s.start(0);
+        audioUnlocked = true;
+      }catch(e){}
+    }
   }
   function setVolume(v){
     volume=v;
@@ -422,7 +429,7 @@
     stopCurrent();
     // FIX iOS: assicura che il contesto sia attivo prima di suonare, altrimenti il
     // secondo suono (in cache, istantaneo) partirebbe su un contesto sospeso = silenzio.
-    if(audioCtx.state !== "running"){ try{ await (unlockPromise || audioCtx.resume()); }catch(e){} }
+    if(audioCtx.state !== "running"){ try{ await audioCtx.resume(); }catch(e){} }
     var src = audioCtx.createBufferSource();
     src.buffer = audioBuf;
     if(clipGain && clipGain!==1){
@@ -725,8 +732,9 @@
   }
 
   // ---------- avvio ----------
+  // Nota: l'AudioContext NON si crea qui, ma al primo tocco (ensureAudio nel gesto),
+  // perché iOS blocca l'audio dei contesti creati senza un'interazione dell'utente.
   render();
-  ensureAudio();   // crea l'AudioContext (sospeso finché non c'è un gesto): serve per decodificare/precaricare
   detectEngine();
 })();
 </script>
