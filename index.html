@@ -355,8 +355,20 @@
   var humanUrl = loadJSON(LS.human, {}); // parola -> url | "" (cercata, non trovata)
   var humanBuf = new Map();              // parola -> {buffer, gain}  (solo in memoria)
 
+  // Override manuale per singole parole la cui registrazione "automatica" suona male.
+  // Vince sulla cache: usa SEMPRE questo file. (URL = registrazione scelta, oppure
+  // stringa vuota "" per forzare la voce sintetica al posto di quella umana.)
+  var HUMAN_OVERRIDE = {
+    "mamma": "https://upload.wikimedia.org/wikipedia/commons/5/59/LL-Q652_%28ita%29-LangPao-mamma.wav"
+  };
+
   async function findHuman(word){
     word = word.toLowerCase().trim();
+    if(Object.prototype.hasOwnProperty.call(HUMAN_OVERRIDE, word)){
+      var ov = HUMAN_OVERRIDE[word];
+      humanUrl[word] = ov || ""; saveJSON(LS.human, humanUrl);
+      return ov || null;
+    }
     if(Object.prototype.hasOwnProperty.call(humanUrl, word)) return humanUrl[word] || null;
     var api = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*"
       + "&generator=search&gsrnamespace=6&gsrlimit=20"
