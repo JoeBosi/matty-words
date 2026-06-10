@@ -200,7 +200,7 @@
         <option value="it-IT-IsabellaNeural">Isabella — femminile</option>
         <option value="it-IT-ElsaNeural">Elsa — femminile</option>
         <option value="it-IT-DiegoNeural">Diego — maschile</option>
-        <option value="it-IT-GiuseppeNeural">Giuseppe — maschile</option>
+        <option value="it-IT-GiuseppeMultilingualNeural">Giuseppe — maschile</option>
       </select>
     </div>
 
@@ -247,10 +247,10 @@
     "pane","latte","nonna","scarpa","fiore","libro","bambino","gelato"];
 
   var DEF_VOICE = "it-IT-IsabellaNeural";
-  var VALID_VOICES = ["it-IT-IsabellaNeural","it-IT-ElsaNeural","it-IT-DiegoNeural","it-IT-GiuseppeNeural"];
+  var VALID_VOICES = ["it-IT-IsabellaNeural","it-IT-ElsaNeural","it-IT-DiegoNeural","it-IT-GiuseppeMultilingualNeural"];
 
   // ---------- impostazioni persistenti (localStorage) ----------
-  var LS = { settings:"aa.settings.v1", phon:"aa.phon.v1", words:"aa.words.v1" };
+  var LS = { settings:"aa.settings.v1", phon:"aa.phon.v1", words:"aa.words.v1", human:"aa.human.v1" };
   function loadJSON(key, def){
     try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; }
   }
@@ -319,27 +319,114 @@
     return audioBuf;
   }
 
+  // ---------- registrazioni umane (Lingua Libre / Wikimedia Commons) ----------
+  // Q652 = lingua italiana. I file si chiamano "LL-Q652 (ita)-Speaker-parola.wav".
+  // Cerchiamo la parola, scarichiamo l'audio, NORMALIZZIAMO il volume e riusiamo.
+  var humanUrl = loadJSON(LS.human, {}); // parola -> url | "" (cercata, non trovata)
+  var humanBuf = new Map();              // parola -> {buffer, gain}  (solo in memoria)
+
+  async function findHuman(word){
+    word = word.toLowerCase().trim();
+    if(Object.prototype.hasOwnProperty.call(humanUrl, word)) return humanUrl[word] || null;
+    var api = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*"
+      + "&generator=search&gsrnamespace=6&gsrlimit=20"
+      + "&gsrsearch=" + encodeURIComponent("LL-Q652 (ita) " + word)
+      + "&prop=imageinfo&iiprop=url|mime";
+    var url = "";
+    try{
+      var r = await fetch(api);
+      if(r.ok){
+        var j = await r.json();
+        var pages = (j.query && j.query.pages) ? Object.keys(j.query.pages).map(function(k){return j.query.pages[k];}) : [];
+        var matches = pages.filter(function(p){
+          var t = (p.title||"").toLowerCase();
+          return t.indexOf("ll-q652")>=0 && t.lastIndexOf("-"+word+".wav") === t.length-("-"+word+".wav").length;
+        });
+        if(matches.length){
+          // varietà: scegliamo in modo stabile uno speaker in base alla parola
+          var pick = matches[ wordHash(word) % matches.length ];
+          if(pick.imageinfo && pick.imageinfo[0]) url = pick.imageinfo[0].url;
+        }
+      }
+    }catch(e){ /* rete assente: trattiamo come "non trovata" per questa volta senza memorizzare */
+      return null;
+    }
+    humanUrl[word] = url;            // memorizza l'esito (anche "non trovata") per non ricercare
+    saveJSON(LS.human, humanUrl);
+    return url || null;
+  }
+  function wordHash(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } return h; }
+
+  // Normalizzazione del volume: pareggia la loudness (RMS) con tetto sul picco (no clipping).
+  function computeNormGain(ab){
+    var d = ab.getChannelData(0), peak=0, sum=0, n=d.length;
+    for(var i=0;i<n;i++){ var s=d[i]<0?-d[i]:d[i]; if(s>peak)peak=s; sum += d[i]*d[i]; }
+    var rms = Math.sqrt(sum/n) || 0.0001;
+    var TARGET_RMS = 0.14, CEIL = 0.97;
+    var g = Math.min(TARGET_RMS/rms, CEIL/(peak||CEIL));
+    if(!isFinite(g) || g<=0) g = 1;
+    return g;
+  }
+  async function getHumanBuffer(word){
+    var key = word.toLowerCase().trim();
+    if(humanBuf.has(key)) return humanBuf.get(key);
+    var url = await findHuman(key);
+    if(!url) return null;
+    var r = await fetch(url);
+    if(!r.ok) return null;
+    var arr = await r.arrayBuffer();
+    var ab = await audioCtx.decodeAudioData(arr);
+    var entry = { buffer: ab, gain: computeNormGain(ab) };
+    humanBuf.set(key, entry);
+    return entry;
+  }
+
   // ---------- riproduzione ----------
   function stopCurrent(){
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
     if('speechSynthesis' in window) speechSynthesis.cancel();
   }
-  function setEngineUsing(device){
-    usingDeviceVoice = device;
-    engineBadge.classList.toggle("cloud", !device);
-    engineText.textContent = device ? "Voce del dispositivo" : "Voce cloud (alta qualità)";
+  // Indica quale voce è in uso: 'human' (reale), 'cloud' (Azure), 'device' (browser).
+  function setEngine(kind){
+    usingDeviceVoice = (kind==="device");
+    engineBadge.classList.toggle("cloud", kind!=="device");
+    engineText.textContent = kind==="human" ? "Voce umana (reale)"
+                            : kind==="cloud" ? "Voce neurale (Microsoft)"
+                            : "Voce del dispositivo";
   }
 
-  function playBuffer(audioBuf, mid, after){
+  function playBuffer(audioBuf, mid, after, clipGain){
     stopCurrent();
     var src = audioCtx.createBufferSource();
     src.buffer = audioBuf;
-    src.connect(masterGain);
+    if(clipGain && clipGain!==1){
+      var g = audioCtx.createGain(); g.gain.value = clipGain;
+      src.connect(g); g.connect(masterGain);   // normalizzazione del singolo clip
+    } else {
+      src.connect(masterGain);
+    }
     src.onended = function(){ if(currentSource===src) currentSource=null; setBars(""); if(after) after(); };
     currentSource = src;
     setBars("playing");
     if(mid) setStatus.apply(null, mid);
     src.start(0);
+  }
+
+  // Parla una PAROLA: prima prova la registrazione umana (Lingua Libre, normalizzata),
+  // altrimenti ripiega su speak() (cloud TTS o voce del browser).
+  async function speakWord(text, mid, after){
+    if(!text){ return; }
+    ensureAudio();
+    stopCurrent();
+    if(audioCtx){
+      try{
+        var key = text.toLowerCase().trim();
+        if(!humanBuf.has(key)){ setStatus("wait","Cerco la voce…","⏳"); setBars("loading"); }
+        var entry = await getHumanBuffer(text);
+        if(entry){ setEngine("human"); playBuffer(entry.buffer, mid, after, entry.gain); return; }
+      }catch(e){ /* nessuna registrazione: si passa al TTS */ }
+    }
+    speak(text, mid, after);
   }
 
   // Parla: prova il cloud (alta qualità), altrimenti ripiega sulla voce del browser.
@@ -352,7 +439,7 @@
         var k = cacheKey(text, currentVoice, rate);
         if(!cache.has(k)){ setStatus("wait","Preparo l'audio…","⏳"); setBars("loading"); }
         var audioBuf = await getBuffer(text, currentVoice, rate);
-        setEngineUsing(false);
+        setEngine("cloud");
         playBuffer(audioBuf, mid, after);
         return;
       }catch(err){
@@ -376,15 +463,19 @@
   }
   function speakBrowser(text, mid, after){
     if(!('speechSynthesis' in window)){ setStatus("err","Audio non disponibile su questo browser."); setBars(""); return; }
-    setEngineUsing(true);
+    setEngine("device");
     speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
+    // Lo spazio finale riduce un bug noto di SpeechSynthesis che tronca la fine
+    // delle parole corte (es. "mamma" -> "mamm"). Con la voce cloud non serve.
+    var u = new SpeechSynthesisUtterance(text + " ");
     u.lang = "it-IT"; if(browserVoice) u.voice = browserVoice;
     u.rate = rate; u.volume = volume; u.pitch = 1;
     u.onstart = function(){ setBars("playing"); if(mid) setStatus.apply(null,mid); };
     u.onend   = function(){ setBars(""); if(after) after(); };
     u.onerror = function(){ setBars(""); };
     speechSynthesis.speak(u);
+    // Workaround Chrome: a volte la sintesi resta "in pausa"; un resume la sblocca.
+    setTimeout(function(){ try{ speechSynthesis.resume(); }catch(e){} }, 60);
   }
 
   // ---------- helper UI ----------
@@ -436,13 +527,13 @@
         function(){ setStatus("","Premi di nuovo per risentire","✓"); });
     }
     else if(mode==="word"){
-      speak(words[idx],
+      speakWord(words[idx],
         ["play","Sto dicendo la parola…","🔊"],
         function(){ setStatus("wait","Aspetta che la ripeta, poi premi → per la prossima","⏳"); });
     }
     else { // say -> risenti
       if(lastSaid){
-        speak(lastSaid,["play","La faccio sentire…","🔊"],
+        speakWord(lastSaid,["play","La faccio sentire…","🔊"],
           function(){ setStatus("","Premi di nuovo per risentire · 🎤 per una nuova","✓"); });
       } else {
         listen();
@@ -451,8 +542,8 @@
   }
 
   function step(d){
-    if(mode==="phon"){ idx=Math.min(Math.max(idx+d,0),phon.length-1); render(); }
-    else if(mode==="word"){ idx=Math.min(Math.max(idx+d,0),words.length-1); render(); }
+    if(mode==="phon"){ idx=Math.min(Math.max(idx+d,0),phon.length-1); render(); prewarmCurrent(); }
+    else if(mode==="word"){ idx=Math.min(Math.max(idx+d,0),words.length-1); render(); prewarmCurrent(); }
   }
 
   // ---------- riconoscimento vocale (modalità "say") ----------
@@ -474,7 +565,7 @@
         lastSaid = w;
         display.className="display word"; display.textContent = w;
         actLabel.textContent="Risenti";
-        speak(w,["play","Ho capito «"+w+"» — la faccio sentire…","✍️"],
+        speakWord(w,["play","Ho capito «"+w+"» — la faccio sentire…","✍️"],
           function(){ setStatus("","Premi per risentire · 🎤 per una nuova parola","✓"); });
       };
       rec.onerror = function(ev){
@@ -500,7 +591,7 @@
     lastSaid = w; typeInput.value="";
     display.className="display word"; display.textContent=w;
     actLabel.textContent="Risenti";
-    speak(w,["play","La faccio sentire…","🔊"],
+    speakWord(w,["play","La faccio sentire…","🔊"],
       function(){ setStatus("","Premi per risentire · 🎤 per una nuova parola","✓"); });
   }
 
@@ -564,28 +655,39 @@
     prewarmCurrent();
   });
 
-  // ---------- pre-generazione audio (partenza istantanea) ----------
+  // ---------- pre-caricamento (partenza istantanea, in modo gentile) ----------
+  // Precarica solo una piccola finestra attorno all'elemento corrente, non tutta la
+  // lista, per non sovraccaricare Wikimedia (e gli URL restano salvati in localStorage).
   var prewarmToken = 0;
   async function prewarmCurrent(){
-    if(!cloudReady || !audioCtx) return;
+    if(!audioCtx) return;
     var myToken = ++prewarmToken;
-    var list = mode==="phon" ? phon.map(function(p){return p.say}) : (mode==="word" ? words : []);
-    for(var i=0;i<list.length;i++){
-      if(myToken!==prewarmToken) return; // annullato da un cambio di modalità/impostazioni
-      var t=list[i];
-      if(cache.has(cacheKey(t,currentVoice,rate))) continue;
-      try{ await getBuffer(t,currentVoice,rate); }catch(e){ return; }
+    if(mode==="word"){
+      var around = [words[idx], words[idx+1], words[idx-1]].filter(Boolean);
+      for(var i=0;i<around.length;i++){
+        if(myToken!==prewarmToken) return;
+        try{ await getHumanBuffer(around[i]); }catch(e){}
+      }
+    } else if(mode==="phon" && cloudReady){
+      var ps = [phon[idx], phon[idx+1]].filter(Boolean).map(function(p){return p.say});
+      for(var j=0;j<ps.length;j++){
+        if(myToken!==prewarmToken) return;
+        if(cache.has(cacheKey(ps[j],currentVoice,rate))) continue;
+        try{ await getBuffer(ps[j],currentVoice,rate); }catch(e){ return; }
+      }
     }
   }
 
-  // ---------- rilevamento engine (cloud vs browser) ----------
+  // ---------- rilevamento engine ----------
+  // Le PAROLE usano registrazioni umane reali (Lingua Libre) quando disponibili.
+  // I FONEMI usano il TTS: cloud (Azure) se la chiave è configurata, altrimenti browser.
   function updateEngineUI(){
     if(cloudReady){
-      engineBox.innerHTML = "✅ <b>Voce cloud attiva</b> (alta qualità). Puoi scegliere la voce qui sopra.";
+      engineBox.innerHTML = "✅ Parole: <b>voci umane reali</b> (Lingua Libre) quando disponibili. Fonemi/sillabe: <b>voce neurale Microsoft</b> (gratis, nessuna chiave).";
     } else {
-      engineBox.innerHTML = "📱 <b>Voce del dispositivo</b> in uso. Per la voce cloud (alta qualità) configura la chiave Azure (vedi README). L'app funziona comunque.";
+      engineBox.innerHTML = "🎙️ Parole: <b>voci umane reali</b> (Lingua Libre) quando disponibili, altrimenti voce del dispositivo. La voce neurale non è raggiungibile in questo momento.";
     }
-    setEngineUsing(!cloudReady);
+    setEngine(cloudReady ? "cloud" : "device");
   }
   async function detectEngine(){
     try{
@@ -593,11 +695,12 @@
       if(res.ok){ var j = await res.json(); cloudReady = !!j.configured; }
     }catch(e){ cloudReady=false; }
     updateEngineUI();
-    if(cloudReady){ ensureAudio(); prewarmCurrent(); }
+    prewarmCurrent();
   }
 
   // ---------- avvio ----------
   render();
+  ensureAudio();   // crea l'AudioContext (sospeso finché non c'è un gesto): serve per decodificare/precaricare
   detectEngine();
 })();
 </script>

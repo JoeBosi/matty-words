@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prova voci — Allenamento all'ascolto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#E7F0EC;--surface:#fff;--ink:#1E2A2E;--muted:#6E807F;--line:#D2E0DA;
+    --accent:#2C8C8C;--play:#E8743B;--shadow:0 10px 30px rgba(30,42,46,.08)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+    padding:clamp(1rem,4vw,2rem);line-height:1.5}
+  h1{font-family:'Fredoka';font-weight:600;font-size:1.6rem;margin:.2rem 0 .3rem}
+  h2{font-family:'Fredoka';font-weight:600;font-size:1.1rem;margin:1.4rem 0 .6rem}
+  .sub{color:var(--muted);max-width:760px;margin:0 0 1.2rem}
+  .warn{background:#FDE7E7;border-radius:14px;padding:.9rem 1.1rem;max-width:760px;margin:0 0 1.2rem;display:none}
+  .warn.show{display:block}
+  .controls{max-width:760px;display:flex;flex-wrap:wrap;gap:1rem;align-items:center;
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:1rem 1.1rem;margin-bottom:.4rem}
+  .controls label{font-weight:600;font-size:.85rem;display:flex;flex-direction:column;gap:.3rem;flex:1;min-width:160px}
+  select,input[type=range]{font-family:'Inter';font-size:1rem}
+  select{border:2px solid var(--line);border-radius:10px;padding:.5rem;background:#fff}
+  .val{color:var(--accent);font-weight:600}
+  .grid{max-width:760px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.6rem}
+  button.play{border:0;border-radius:14px;cursor:pointer;color:#fff;background:var(--play);
+    font-family:'Fredoka';font-weight:600;font-size:1.05rem;padding:.9rem .6rem;transition:transform .08s,filter .15s}
+  button.play.syl{background:var(--accent)}
+  button.play:active{transform:translateY(2px)}
+  button.play.on{filter:brightness(1.1);outline:3px solid rgba(0,0,0,.12)}
+  button.play small{display:block;font-weight:400;opacity:.85;font-size:.7rem;margin-top:.15rem}
+  .status{max-width:760px;margin-top:1rem;color:var(--muted);font-size:.9rem;min-height:1.4em}
+</style>
+</head>
+<body>
+  <h1>🎧 Prova voci</h1>
+  <p class="sub">Ascolta le 4 voci italiane neurali Microsoft (gratis, senza chiave), regola la
+  <b>velocità</b> per scandire bene, e prova <b>parole</b> e <b>sillabe</b>. Tutto passa da <code>/api/tts</code>.</p>
+
+  <div class="warn" id="warn">
+    ⚠️ La voce neurale non risponde. Assicurati che il dev-server sia avviato
+    (<code>node scripts/dev-server.mjs</code>) e apri da <b>http://localhost:5050/prova-voci.html</b>.
+  </div>
+
+  <div class="controls">
+    <label>Voce
+      <select id="voice">
+        <option value="it-IT-IsabellaNeural">Isabella — femminile</option>
+        <option value="it-IT-ElsaNeural">Elsa — femminile</option>
+        <option value="it-IT-DiegoNeural">Diego — maschile</option>
+        <option value="it-IT-GiuseppeMultilingualNeural">Giuseppe — maschile</option>
+      </select>
+    </label>
+    <label>Velocità <span class="val" id="ratev">0.90×</span>
+      <input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.9">
+    </label>
+    <label>Volume <span class="val" id="volv">100%</span>
+      <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
+    </label>
+  </div>
+
+  <h2>Parole</h2>
+  <div class="grid" id="words"></div>
+
+  <h2>Sillabe singole</h2>
+  <div class="grid" id="syl"></div>
+
+  <h2>Parole scandite per sillabe</h2>
+  <div class="grid" id="scan"></div>
+
+  <div class="status" id="status"></div>
+
+<script>
+(function(){
+  "use strict";
+  var WORDS = ["mamma","papà","cavolfiore","ciao","gelato","bambino"];
+  var SYL   = ["ma","pa","ta","ca","fa","sa","la","mu"];
+  // testo scandito: gli spazi creano una piccola pausa tra le sillabe
+  var SCAN  = [["mamma","ma ma"],["papà","pa pà"],["cavolfiore","ca vol fio re"],["ciao","ci a o"],["tavolo","ta vo lo"],["gelato","ge la to"]];
+
+  var $ = function(id){return document.getElementById(id)};
+  var voiceSel=$("voice"), rateEl=$("rate"), volEl=$("vol"), statusEl=$("status");
+  var volume=1, rate=0.9;
+  rateEl.addEventListener("input",function(){rate=parseFloat(rateEl.value);$("ratev").textContent=rate.toFixed(2)+"×";});
+  volEl.addEventListener("input",function(){volume=parseFloat(volEl.value);$("volv").textContent=Math.round(volume*100)+"%";if(masterGain)masterGain.gain.value=volume;});
+
+  var audioCtx=null, masterGain=null, currentSource=null, activeBtn=null;
+  function ensureAudio(){
+    if(!audioCtx){ var AC=window.AudioContext||window.webkitAudioContext; audioCtx=new AC();
+      masterGain=audioCtx.createGain(); masterGain.gain.value=volume; masterGain.connect(audioCtx.destination); }
+    if(audioCtx.state==="suspended") audioCtx.resume();
+  }
+  function setActive(b){ if(activeBtn)activeBtn.classList.remove("on"); activeBtn=b; if(b)b.classList.add("on"); }
+  function stopCurrent(){ if(currentSource){try{currentSource.onended=null;currentSource.stop();}catch(e){}currentSource=null;} }
+
+  var cache=new Map();
+  function computeNormGain(ab){
+    var d=ab.getChannelData(0),peak=0,sum=0,n=d.length;
+    for(var i=0;i<n;i++){var s=d[i]<0?-d[i]:d[i];if(s>peak)peak=s;sum+=d[i]*d[i];}
+    var rms=Math.sqrt(sum/n)||0.0001, g=Math.min(0.14/rms,0.97/(peak||0.97));
+    return (!isFinite(g)||g<=0)?1:g;
+  }
+  async function getClip(text){
+    var key=voiceSel.value+"|"+rate+"|"+text;
+    if(cache.has(key)) return cache.get(key);
+    var res=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text:text,voice:voiceSel.value,rate:rate})});
+    if(!res.ok){ var t=await res.text().catch(function(){return""}); throw new Error("HTTP "+res.status+" "+t.slice(0,140)); }
+    var arr=await res.arrayBuffer();
+    var ab=await audioCtx.decodeAudioData(arr);
+    var entry={buffer:ab,gain:computeNormGain(ab)};
+    cache.set(key,entry); return entry;
+  }
+  async function play(text,btn){
+    ensureAudio(); stopCurrent(); setActive(btn);
+    statusEl.textContent="Preparo «"+text+"»…";
+    try{
+      var e=await getClip(text);
+      stopCurrent();
+      var src=audioCtx.createBufferSource(); src.buffer=e.buffer;
+      var g=audioCtx.createGain(); g.gain.value=e.gain; src.connect(g); g.connect(masterGain);
+      src.onended=function(){ if(currentSource===src)currentSource=null; setActive(null); };
+      currentSource=src; src.start(0);
+      statusEl.textContent="▶ «"+text+"» — voce "+voiceSel.options[voiceSel.selectedIndex].text;
+    }catch(err){ setActive(null); statusEl.textContent="⚠️ Errore: "+err.message; }
+  }
+
+  function mk(container, list, cls){
+    list.forEach(function(item){
+      var label = Array.isArray(item)? item[0] : item;
+      var text  = Array.isArray(item)? item[1] : item;
+      var b=document.createElement("button"); b.className="play"+(cls?" "+cls:"");
+      b.innerHTML = label + (Array.isArray(item)? "<small>"+text+"</small>" : "");
+      b.addEventListener("click",function(){ play(text,b); });
+      container.appendChild(b);
+    });
+  }
+  mk($("words"),WORDS); mk($("syl"),SYL,"syl"); mk($("scan"),SCAN,"syl");
+
+  fetch("/api/tts",{method:"GET"}).then(function(r){return r.ok?r.json():null}).then(function(j){
+    if(!j || !j.configured) $("warn").classList.add("show");
+  }).catch(function(){ $("warn").classList.add("show"); });
+})();
+</script>
+</body>
+</html>

@@ -7,22 +7,32 @@ da affiancare al lavoro di logopedista/audiologo; gli esercizi andrebbero valida
 ## Stack
 - Progetto statico + serverless per **Vercel**:
   - `index.html` — tutta l'app (HTML + CSS + JavaScript vanilla, nessun build).
-  - `api/tts.js` — funzione serverless: riceve testo+voce+velocità e restituisce
-    audio MP3 da **Azure Speech**. La chiave sta SOLO lato server (env var).
-- Audio:
-  - **TTS cloud**: Azure Speech (voci neurali it-IT) via `/api/tts`, riprodotto con
-    **Web Audio API** (decodeAudioData → BufferSource → GainNode per il volume,
-    funziona anche su iOS). Cache lato client per testo+voce+velocità.
-  - **Ripiego**: se la chiave Azure non è configurata (o la rete fallisce), usa
-    `SpeechSynthesis` del browser. Il badge "engine" in UI mostra quale è attiva.
-  - riconoscimento `SpeechRecognition` / `webkitSpeechRecognition` (modalità "Dì una parola").
+  - `api/tts.js` — funzione serverless: testo+voce+velocità → audio MP3 dalle voci
+    neurali **Microsoft** (qualità Azure) tramite il motore gratuito di Edge.
+    **NESSUNA chiave**, nessuna fatturazione.
+  - `lib/tts.mjs` — nucleo TTS condiviso (Vercel + dev-server), usa il pacchetto `msedge-tts`.
+  - `scripts/dev-server.mjs` — server locale che replica `/api/tts` (con "clean URL").
+- Audio, in ordine di priorità:
+  - **PAROLE**: registrazioni **umane reali** da **Lingua Libre/Wikimedia Commons**
+    (Q652 = italiano), cercate al volo, **normalizzate in volume** (RMS + tetto picco)
+    e riusate. URL salvati in localStorage. Speaker diversi = varietà (apprezzata).
+  - **FONEMI/SILLABE e parole senza registrazione**: **TTS Microsoft** (voci Isabella/
+    Elsa/Diego/Giuseppe) via `/api/tts`. File audio → niente troncamenti, velocità regolabile.
+  - **Ultimo ripiego** (se `/api/tts` non raggiungibile e nessuna registrazione):
+    `SpeechSynthesis` del browser (con fix per il taglio di fine parola). Il badge
+    "engine" mostra quale voce è in uso: umana / cloud / dispositivo.
+  - Riproduzione con **Web Audio API** (decode → BufferSource → GainNode, ok su iOS).
+  - Riconoscimento `SpeechRecognition` / `webkitSpeechRecognition` (modalità "Dì una parola").
 - Font: Fredoka (display) + Inter (UI). Palette calma, alto contrasto.
-- **localStorage**: salva liste (fonemi/parole) e impostazioni (voce, volume, velocità).
+- **localStorage**: liste (fonemi/parole), impostazioni (voce, volume, velocità), URL audio umani.
 
-## Variabili d'ambiente (vedi `.env.example`)
-- `AZURE_SPEECH_KEY` — chiave della risorsa Azure Speech (piano gratuito F0).
-- `AZURE_SPEECH_REGION` — regione (es. `westeurope`).
+## Variabili d'ambiente
+Nessuna. Le voci Microsoft sono gratuite e senza chiave (anche su Vercel).
 Le 4 voci esposte: Isabella, Elsa (femminili), Diego, Giuseppe (maschili).
+
+## Prova in locale
+`node scripts/dev-server.mjs` → http://localhost:5050
+- `index.html` = app. `prova-voci.html` = pagina per scegliere voce/velocità e sentire le sillabe.
 
 ## Regola di design fondamentale (non rimuovere)
 In **ogni** modalità deve essere SEMPRE visibile a schermo cosa sta facendo l'app,

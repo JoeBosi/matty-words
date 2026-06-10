@@ -14,93 +14,67 @@ si sente nulla, si capisce cosa sta facendo l'app) e gli stessi comandi:
 - **Barra spaziatrice** o **tocco sul palco** = ascolta / risenti
 - **← / →** (o i pulsanti ‹ ›) = elemento precedente / successivo
 
-1. **Fonemi** — mostra la lettera, premi e la senti, scorri con ← →.
+1. **Fonemi** — mostra la lettera/sillaba, premi e la senti, scorri con ← →.
 2. **Parole** — premi e senti la parola, poi avanzi con →.
 3. **Dì una parola** — premi 🎤, pronuncia una parola: l'app la scrive grande e la
    fa sentire. Se il microfono non è disponibile, puoi **scriverla**.
 
-## Voce: cloud (alta qualità) o ripiego
+## Da dove arriva l'audio (in ordine di priorità)
 
-- **Con chiave Azure configurata**: usa le voci neurali italiane di **Azure Speech**
-  (alta qualità), selezionabili dalle impostazioni: **Isabella** ed **Elsa**
-  (femminili), **Diego** e **Giuseppe** (maschili). La chiave **non sta mai nel
-  client**: viene letta da una funzione serverless `/api/tts`.
-- **Senza chiave**: l'app ripiega automaticamente sulla **voce sintetica del
-  browser**, così funziona comunque. Il badge in basso e le impostazioni mostrano
-  sempre quale voce è attiva.
+1. **Parole → voce umana reale.** Le parole usano registrazioni di madrelingua da
+   **Lingua Libre / Wikimedia Commons** (licenza CC-BY-SA), cercate al volo,
+   **normalizzate nel volume** e riusate (gli URL trovati restano in `localStorage`).
+   Speaker diversi = varietà naturale.
+2. **Fonemi/sillabe e parole senza registrazione → TTS Microsoft.** Voci neurali
+   italiane (qualità Azure) tramite il motore gratuito usato da "Leggi ad alta voce" di
+   Edge, via la funzione serverless `/api/tts`. **Nessuna chiave, nessuna fatturazione.**
+   File audio reali → le parole **non vengono troncate** e la velocità è regolabile per
+   scandire. Voci: **Isabella, Elsa** (femminili), **Diego, Giuseppe** (maschili).
+3. **Ultimo ripiego → voce del browser** (`SpeechSynthesis`), solo se `/api/tts` non è
+   raggiungibile e non c'è registrazione. Il badge in basso indica sempre la voce in uso.
 
-L'audio scaricato viene messo in **cache lato client** (per testo + voce + velocità)
-per non riscaricarlo: meno latenza e meno consumo. Il volume usa la **Web Audio API
-(GainNode)** così funziona anche su iOS Safari.
+Il volume usa la **Web Audio API (GainNode)**, così funziona anche su iOS Safari.
 
 ## Struttura del progetto
 
 ```
-index.html        → tutta l'app (HTML + CSS + JS vanilla, nessun build)
-api/tts.js        → funzione serverless Vercel: testo+voce → audio MP3 (Azure)
-.env.example      → variabili d'ambiente da copiare
-package.json      → metadati (Node ≥ 18, ESM)
+index.html            → l'app (HTML + CSS + JS vanilla, nessun build)
+prova-voci.html       → pagina per provare/scegliere le voci e le sillabe
+api/tts.js            → funzione serverless Vercel: testo+voce → MP3 (Microsoft)
+lib/tts.mjs           → nucleo TTS condiviso (pacchetto msedge-tts)
+scripts/dev-server.mjs→ server locale che replica /api/tts per lo sviluppo
 ```
 
-## 1) Ottenere la chiave Azure (gratis)
+## 1) Avvio in locale
 
-Il piano **Free F0** di Azure Speech dà **500.000 caratteri/mese gratis**: per
-questo uso (fonemi e parole brevi, con cache) il costo previsto è **€0**.
-
-1. Vai su <https://portal.azure.com> → **Crea risorsa** → cerca **Speech**.
-2. Crea la risorsa scegliendo il **piano gratuito F0** e una regione (es.
-   *West Europe*).
-3. Apri la risorsa → **Keys and Endpoint**: copia una **chiave** e la **regione**.
-
-## 2) Avvio in locale
-
-Serve la [Vercel CLI](https://vercel.com/docs/cli) per eseguire anche la funzione
-`/api/tts` in locale:
+Nessuna chiave da configurare. 🎉
 
 ```bash
-npm i -g vercel        # installa la CLI (una volta sola)
-cp .env.example .env    # poi inserisci AZURE_SPEECH_KEY e AZURE_SPEECH_REGION
-vercel dev              # avvia su http://localhost:3000
+npm install                 # installa msedge-tts
+node scripts/dev-server.mjs # avvia su http://localhost:5050
 ```
 
-> Senza chiave puoi comunque aprire `index.html` direttamente nel browser: l'app
-> userà la voce del dispositivo (la funzione `/api/tts` non sarà disponibile).
+Apri **http://localhost:5050** (l'app) oppure
+**http://localhost:5050/prova-voci.html** (per scegliere voce e velocità).
 
-## 3) Deploy su Vercel
+## 2) Deploy su Vercel
 
-**Via dashboard (consigliato):**
+1. <https://vercel.com/new> → importa il repo da GitHub.
+2. Framework Preset: **Other** (nessun build, nessuna variabile d'ambiente da impostare).
+3. **Deploy**. Ogni `git push` ridistribuisce automaticamente.
 
-1. Vai su <https://vercel.com> → **Add New… → Project** → importa questo repo da GitHub.
-2. Framework Preset: **Other** (nessun build necessario).
-3. **Settings → Environment Variables**: aggiungi
-   - `AZURE_SPEECH_KEY` = la tua chiave
-   - `AZURE_SPEECH_REGION` = la tua regione (es. `westeurope`)
-4. **Deploy**. Ad ogni `git push` Vercel ridistribuisce automaticamente.
-
-**Via CLI:**
-
-```bash
-vercel                                   # primo deploy (collega il progetto)
-vercel env add AZURE_SPEECH_KEY          # incolla la chiave
-vercel env add AZURE_SPEECH_REGION       # es. westeurope
-vercel --prod                            # deploy in produzione
-```
+Via CLI: `npm i -g vercel` poi `vercel --prod`.
 
 ## Variabili d'ambiente
 
-| Nome | Esempio | Descrizione |
-|------|---------|-------------|
-| `AZURE_SPEECH_KEY` | `a1b2c3…` | Chiave della risorsa Azure Speech |
-| `AZURE_SPEECH_REGION` | `westeurope` | Regione della risorsa |
-
-Se non sono impostate, `/api/tts` risponde `503` e l'app usa la voce del browser.
+Nessuna: le voci Microsoft sono gratuite e non richiedono chiavi.
 
 ## Note tecniche
 
-- **Fonemi con voce sintetica**: vocali e consonanti continue (M, S, F, V, R, L)
-  suonano bene; le occlusive (P, T, C, B, D, G) isolate sono quasi mute → meglio
-  inserirle come sillabe (`PA | pa`). Per qualità clinica servirebbero registrazioni reali.
-- **Modalità "Dì una parola"**: il riconoscimento (`SpeechRecognition`) richiede il
-  permesso del microfono e funziona meglio su Chrome. C'è sempre il ripiego "scrivi la parola".
-- Liste (fonemi/parole) e impostazioni (voce, volume, velocità) sono salvate in
-  **localStorage** del browser.
+- **Sillabe / occlusive**: con il TTS le occlusive isolate (P, T, C, B, D, G) rendono
+  meglio come sillabe (`PA | pa`). Con Google la velocità è regolabile per scandirle.
+- **Crediti audio umani**: le registrazioni vengono da Lingua Libre/Commons (CC-BY-SA):
+  in un deploy pubblico va aggiunta una pagina/crediti con gli autori.
+- **Modalità "Dì una parola"**: `SpeechRecognition` richiede il permesso del microfono
+  e funziona meglio su Chrome. C'è sempre il ripiego "scrivi la parola".
+- Liste e impostazioni sono salvate in **localStorage**.
