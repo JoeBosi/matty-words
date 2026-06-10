@@ -2,7 +2,6 @@
 
 Web app di **pratica/allenamento uditivo** pensata per portatori di impianto
 cocleare, anche bambini piccoli che non sanno ancora descrivere cosa sentono.
-(Il nome è dedicato a Matteo, da cui nasce l'idea.)
 
 > ⚠️ **Non è un dispositivo medico.** È un supporto da affiancare al lavoro di
 > logopedista/audiologo; gli esercizi andrebbero validati da loro.
