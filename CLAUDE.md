@@ -1,4 +1,7 @@
-# Allenamento all'ascolto — strumento per portatori di impianto cocleare
+# Matty Words — allenamento all'ascolto per portatori di impianto cocleare
+
+Nome pubblico dell'app: **Matty Words** (dedicato a Matteo). Sottotitolo/descrizione:
+"allenamento all'ascolto".
 
 Web app di pratica/allenamento uditivo, pensata anche per bambini piccoli che non
 sanno ancora descrivere cosa sentono. **Non è un dispositivo medico**: è un supporto

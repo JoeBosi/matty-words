@@ -1,7 +1,7 @@
 {
-  "name": "Allenamento all'ascolto",
-  "short_name": "Ascolto",
-  "description": "Strumento di allenamento uditivo per portatori di impianto cocleare. Non è un dispositivo medico.",
+  "name": "Matty Words",
+  "short_name": "Matty",
+  "description": "Matty Words — allenamento all'ascolto per portatori di impianto cocleare. Non è un dispositivo medico.",
   "lang": "it",
   "dir": "ltr",
   "start_url": "/",
