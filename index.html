@@ -270,7 +270,7 @@
   var VALID_VOICES = ["it-IT-IsabellaNeural","it-IT-ElsaNeural","it-IT-DiegoNeural","it-IT-GiuseppeMultilingualNeural"];
 
   // ---------- impostazioni persistenti (localStorage) ----------
-  var LS = { settings:"aa.settings.v1", phon:"aa.phon.v1", words:"aa.words.v1", human:"aa.human.v1" };
+  var LS = { settings:"aa.settings.v1", phon:"aa.phon.v1", words:"aa.words.v1", human:"aa.human.v2" };
   function loadJSON(key, def){
     try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; }
   }
@@ -352,52 +352,49 @@
   // ---------- registrazioni umane (Lingua Libre / Wikimedia Commons) ----------
   // Q652 = lingua italiana. I file si chiamano "LL-Q652 (ita)-Speaker-parola.wav".
   // Cerchiamo la parola, scarichiamo l'audio, NORMALIZZIAMO il volume e riusiamo.
-  var humanUrl = loadJSON(LS.human, {}); // parola -> url | "" (cercata, non trovata)
-  var humanBuf = new Map();              // parola -> {buffer, gain}  (solo in memoria)
+  var humanUrls = loadJSON(LS.human, {}); // parola -> [url, ...]  (lista registrazioni; [] = nessuna)
+  var bufByUrl = new Map();               // url -> {buffer, gain}  (solo in memoria)
 
-  // Override manuale per singole parole la cui registrazione "automatica" suona male.
-  // Vince sulla cache: usa SEMPRE questo file. (URL = registrazione scelta, oppure
-  // stringa vuota "" per forzare la voce sintetica al posto di quella umana.)
+  // Override manuale: per alcune parole limitiamo/forziamo le registrazioni usate.
+  // Valore = lista di URL usati a rotazione CASUALE (oppure [] per forzare la voce sintetica).
   var HUMAN_OVERRIDE = {
-    "mamma": "https://upload.wikimedia.org/wikipedia/commons/5/59/LL-Q652_%28ita%29-LangPao-mamma.wav"
+    // "mamma": teniamo solo le due voci buone (escludendo quella che suonava male)
+    "mamma": [
+      "https://upload.wikimedia.org/wikipedia/commons/5/59/LL-Q652_%28ita%29-LangPao-mamma.wav",
+      "https://upload.wikimedia.org/wikipedia/commons/7/7c/LL-Q652_%28ita%29-Happypheasant-mamma.wav"
+    ]
   };
 
-  async function findHuman(word){
+  // Ritorna la LISTA delle registrazioni umane per una parola (da override, cache o ricerca).
+  async function findHumanList(word){
     word = word.toLowerCase().trim();
     if(Object.prototype.hasOwnProperty.call(HUMAN_OVERRIDE, word)){
-      var ov = HUMAN_OVERRIDE[word];
-      humanUrl[word] = ov || ""; saveJSON(LS.human, humanUrl);
-      return ov || null;
+      var ov = HUMAN_OVERRIDE[word] || [];
+      humanUrls[word] = ov; saveJSON(LS.human, humanUrls);
+      return ov;
     }
-    if(Object.prototype.hasOwnProperty.call(humanUrl, word)) return humanUrl[word] || null;
+    if(Object.prototype.hasOwnProperty.call(humanUrls, word)) return humanUrls[word] || [];
     var api = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*"
       + "&generator=search&gsrnamespace=6&gsrlimit=20"
       + "&gsrsearch=" + encodeURIComponent("LL-Q652 (ita) " + word)
       + "&prop=imageinfo&iiprop=url|mime";
-    var url = "";
+    var list = [];
     try{
       var r = await fetch(api);
       if(r.ok){
         var j = await r.json();
         var pages = (j.query && j.query.pages) ? Object.keys(j.query.pages).map(function(k){return j.query.pages[k];}) : [];
-        var matches = pages.filter(function(p){
+        pages.forEach(function(p){
           var t = (p.title||"").toLowerCase();
-          return t.indexOf("ll-q652")>=0 && t.lastIndexOf("-"+word+".wav") === t.length-("-"+word+".wav").length;
+          var ok = t.indexOf("ll-q652")>=0 && t.lastIndexOf("-"+word+".wav") === t.length-("-"+word+".wav").length;
+          if(ok && p.imageinfo && p.imageinfo[0]) list.push(p.imageinfo[0].url);
         });
-        if(matches.length){
-          // varietà: scegliamo in modo stabile uno speaker in base alla parola
-          var pick = matches[ wordHash(word) % matches.length ];
-          if(pick.imageinfo && pick.imageinfo[0]) url = pick.imageinfo[0].url;
-        }
       }
-    }catch(e){ /* rete assente: trattiamo come "non trovata" per questa volta senza memorizzare */
-      return null;
-    }
-    humanUrl[word] = url;            // memorizza l'esito (anche "non trovata") per non ricercare
-    saveJSON(LS.human, humanUrl);
-    return url || null;
+    }catch(e){ return []; } // rete assente: non memorizziamo, riproveremo
+    humanUrls[word] = list;          // memorizza l'esito (anche [] = non trovata) per non ricercare
+    saveJSON(LS.human, humanUrls);
+    return list;
   }
-  function wordHash(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } return h; }
 
   // Normalizzazione del volume: pareggia la loudness (RMS) con tetto sul picco (no clipping).
   function computeNormGain(ab){
@@ -409,19 +406,24 @@
     if(!isFinite(g) || g<=0) g = 1;
     return g;
   }
-  async function getHumanBuffer(word){
-    var key = word.toLowerCase().trim();
-    if(humanBuf.has(key)) return humanBuf.get(key);
-    var url = await findHuman(key);
-    if(!url) return null;
+  async function bufferForUrl(url){
+    if(bufByUrl.has(url)) return bufByUrl.get(url);
     var r = await fetch(url);
     if(!r.ok) return null;
     var arr = await r.arrayBuffer();
     var ab = await audioCtx.decodeAudioData(arr);
     var entry = { buffer: ab, gain: computeNormGain(ab) };
-    humanBuf.set(key, entry);
+    bufByUrl.set(url, entry);
     return entry;
   }
+  // Sceglie a CASO una delle registrazioni disponibili per la parola (varietà di voci).
+  async function getHumanBuffer(word){
+    var list = await findHumanList(word);
+    if(!list || !list.length) return null;
+    var url = list[ Math.floor(Math.random() * list.length) ];
+    return bufferForUrl(url);
+  }
+  function humanKnown(word){ return Object.prototype.hasOwnProperty.call(humanUrls, (word||"").toLowerCase().trim()); }
 
   // ---------- riproduzione ----------
   function stopCurrent(){
@@ -465,8 +467,7 @@
     stopCurrent();
     if(audioCtx){
       try{
-        var key = text.toLowerCase().trim();
-        if(!humanBuf.has(key)){ setStatus("wait","Cerco la voce…","⏳"); setBars("loading"); }
+        if(!humanKnown(text)){ setStatus("wait","Cerco la voce…","⏳"); setBars("loading"); }
         var entry = await getHumanBuffer(text);
         if(entry){ setEngine("human"); playBuffer(entry.buffer, mid, after, entry.gain); return; }
       }catch(e){ /* nessuna registrazione: si passa al TTS */ }
