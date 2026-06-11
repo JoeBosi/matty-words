@@ -220,8 +220,8 @@
     <div class="enginebox" id="engineBox">Controllo della voce in corso…</div>
 
     <div class="field">
-      <label for="voiceSel">Voce</label>
-      <small>Voci neurali (alta qualità) usate quando la voce cloud è attiva.</small>
+      <label for="voiceSel">Voce dei fonemi</label>
+      <small>Voce neurale per i fonemi/lettere. Le <b>parole</b> usano invece voci a rotazione casuale (umane + neurali).</small>
       <select id="voiceSel">
         <option value="it-IT-IsabellaNeural">Isabella — femminile</option>
         <option value="it-IT-ElsaNeural">Elsa — femminile</option>
@@ -434,32 +434,34 @@
     bufByUrl.set(url, entry);
     return entry;
   }
-  // Sceglie a CASO una delle registrazioni disponibili per la parola (varietà di voci),
-  // evitando — se ci sono alternative — di ripetere la stessa voce della volta precedente.
-  var lastHumanUrl = "";
-  async function getHumanBuffer(word){
-    var list = await findHumanList(word);
-    if(!list || !list.length) return null;
-    var pool = list;
-    if(list.length > 1){ pool = list.filter(function(u){ return u !== lastHumanUrl; }); if(!pool.length) pool = list; }
-    var url = pool[ Math.floor(Math.random() * pool.length) ];
-    lastHumanUrl = url;
-    return bufferForUrl(url);
-  }
   function humanKnown(word){ return Object.prototype.hasOwnProperty.call(humanUrls, (word||"").toLowerCase().trim()); }
+
+  // Nome breve della voce TTS, ed estrazione dello speaker dall'URL di Lingua Libre.
+  var VOICE_SHORT = { "it-IT-IsabellaNeural":"Isabella", "it-IT-ElsaNeural":"Elsa",
+                      "it-IT-DiegoNeural":"Diego", "it-IT-GiuseppeMultilingualNeural":"Giuseppe" };
+  function voiceShort(v){ return VOICE_SHORT[v] || v; }
+  function speakerFromUrl(u){
+    try{ var f=decodeURIComponent(u.split("/").pop()); var m=/\(ita\)-(.*)-[^-]+\.wav$/i.exec(f); return m ? m[1] : "voce umana"; }
+    catch(e){ return "voce umana"; }
+  }
+  // Le voci TTS che entrano nella "rosa" casuale.
+  function ttsOptions(){ return VALID_VOICES.map(function(v){ return { type:"tts", voice:v, name:voiceShort(v) }; }); }
+  function voiceKey(o){ return o.type==="human" ? ("h:"+o.url) : ("t:"+o.voice); }
 
   // ---------- riproduzione ----------
   function stopCurrent(){
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
     if('speechSynthesis' in window) speechSynthesis.cancel();
   }
-  // Indica quale voce è in uso: 'human' (reale), 'cloud' (Azure), 'device' (browser).
-  function setEngine(kind){
+  // Indica quale voce è in uso. `detail` (es. "Umana · LangPao") mostra QUALE voce
+  // sta parlando tra le varie opzioni; se assente, mostra l'etichetta generica.
+  function setEngine(kind, detail){
     usingDeviceVoice = (kind==="device");
     engineBadge.classList.toggle("cloud", kind!=="device");
-    engineText.textContent = kind==="human" ? "Voce umana (reale)"
-                            : kind==="cloud" ? "Voce neurale (Microsoft)"
-                            : "Voce del dispositivo";
+    var base = kind==="human" ? "Voce umana (reale)"
+             : kind==="cloud" ? "Voce neurale (Microsoft)"
+             : "Voce del dispositivo";
+    engineText.textContent = detail ? detail : base;
   }
 
   async function playBuffer(audioBuf, mid, after, clipGain){
@@ -482,8 +484,10 @@
     src.start(0);
   }
 
-  // Parla una PAROLA: prima prova la registrazione umana (Lingua Libre, normalizzata),
-  // altrimenti ripiega su speak() (cloud TTS o voce del browser).
+  // Parla una PAROLA scegliendo a CASO dalla "rosa": registrazioni umane (Lingua Libre)
+  // + voci TTS neurali. Evita di ripetere la voce della volta precedente. Mostra in
+  // basso quale voce sta parlando (es. "Umana · LangPao" o "Microsoft · Diego").
+  var lastVoiceKey = "";
   async function speakWord(text, mid, after){
     if(!text){ return; }
     ensureAudio();
@@ -491,9 +495,23 @@
     if(audioCtx){
       try{
         if(!humanKnown(text)){ setStatus("wait","Cerco la voce…","⏳"); setBars("loading"); }
-        var entry = await getHumanBuffer(text);
-        if(entry){ setEngine("human"); playBuffer(entry.buffer, mid, after, entry.gain); return; }
-      }catch(e){ /* nessuna registrazione: si passa al TTS */ }
+        // costruisci la rosa: umane disponibili + voci TTS (se il cloud è raggiungibile)
+        var humans = (await findHumanList(text) || []).map(function(u){ return { type:"human", url:u, name:speakerFromUrl(u) }; });
+        var pool = humans.concat(cloudReady ? ttsOptions() : []);
+        if(pool.length){
+          var choices = pool;
+          if(pool.length > 1){ choices = pool.filter(function(o){ return voiceKey(o) !== lastVoiceKey; }); if(!choices.length) choices = pool; }
+          var opt = choices[ Math.floor(Math.random() * choices.length) ];
+          lastVoiceKey = voiceKey(opt);
+          if(opt.type === "human"){
+            var e = await bufferForUrl(opt.url);
+            if(e){ setEngine("human", "Umana · " + opt.name); playBuffer(e.buffer, mid, after, e.gain); return; }
+          } else {
+            var ab = await getBuffer(text, opt.voice, rate);
+            setEngine("cloud", "Microsoft · " + opt.name); playBuffer(ab, mid, after); return;
+          }
+        }
+      }catch(e){ /* problemi di rete: ripiego sotto */ }
     }
     speak(text, mid, after);
   }
@@ -508,7 +526,7 @@
         var k = cacheKey(text, currentVoice, rate);
         if(!cache.has(k)){ setStatus("wait","Preparo l'audio…","⏳"); setBars("loading"); }
         var audioBuf = await getBuffer(text, currentVoice, rate);
-        setEngine("cloud");
+        setEngine("cloud", "Microsoft · " + voiceShort(currentVoice));
         playBuffer(audioBuf, mid, after);
         return;
       }catch(err){
@@ -818,7 +836,8 @@
       var around = [words[idx], words[idx+1], words[idx-1]].filter(Boolean);
       for(var i=0;i<around.length;i++){
         if(myToken!==prewarmToken) return;
-        try{ await getHumanBuffer(around[i]); }catch(e){}
+        // risolve la lista delle voci umane e pre-decodifica la prima (se c'è)
+        try{ var l = await findHumanList(around[i]); if(l && l[0]) await bufferForUrl(l[0]); }catch(e){}
       }
     } else if(mode==="phon" && cloudReady){
       var ps = [phon[idx], phon[idx+1]].filter(Boolean).map(function(p){return p.say});
