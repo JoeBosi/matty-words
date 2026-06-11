@@ -132,6 +132,8 @@
   .engine{font-size:.74rem;color:var(--muted);text-align:center;display:flex;align-items:center;gap:.35rem;justify-content:center;opacity:.85}
   .engine .ed{width:8px;height:8px;border-radius:50%;background:var(--idle)}
   .engine.cloud .ed{background:var(--wait)}
+  .outbadge{border:0;background:transparent;font:inherit;cursor:pointer;margin-top:.15rem}
+  .outbadge:active{transform:translateY(1px)}
   .typebox{display:none;width:min(640px,92vw);gap:.5rem}
   .typebox input{flex:1;border:2px solid var(--line);border-radius:14px;padding:.8rem 1rem;font-size:16px;font-family:'Inter';outline:none}
   .typebox input:focus{border-color:var(--wait)}
@@ -206,6 +208,7 @@
 
   <div class="hint" id="hint"><kbd>Barra</kbd> ascolta · <kbd>←</kbd> <kbd>→</kbd> scorri</div>
   <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">controllo voce…</span></div>
+  <button class="engine outbadge" id="outBadge" type="button" title="Uscita audio (tocca per le impostazioni)">🔈 <span id="outText">uscita…</span></button>
 </main>
 
 <!-- impostazioni -->
@@ -431,11 +434,16 @@
     bufByUrl.set(url, entry);
     return entry;
   }
-  // Sceglie a CASO una delle registrazioni disponibili per la parola (varietà di voci).
+  // Sceglie a CASO una delle registrazioni disponibili per la parola (varietà di voci),
+  // evitando — se ci sono alternative — di ripetere la stessa voce della volta precedente.
+  var lastHumanUrl = "";
   async function getHumanBuffer(word){
     var list = await findHumanList(word);
     if(!list || !list.length) return null;
-    var url = list[ Math.floor(Math.random() * list.length) ];
+    var pool = list;
+    if(list.length > 1){ pool = list.filter(function(u){ return u !== lastHumanUrl; }); if(!pool.length) pool = list; }
+    var url = pool[ Math.floor(Math.random() * pool.length) ];
+    lastHumanUrl = url;
     return bufferForUrl(url);
   }
   function humanKnown(word){ return Object.prototype.hasOwnProperty.call(humanUrls, (word||"").toLowerCase().trim()); }
@@ -697,6 +705,7 @@
     $("wordText").value=words.join("\n");
     ensureAudio();      // il click sull'ingranaggio è un gesto: ok per audio/setSinkId
     setupSinkUI();
+    updateOutputLabel();
     panel.classList.add("show");
   }
   $("gear").addEventListener("click", openPanel);
@@ -753,6 +762,7 @@
     chosenSink=e.target.value; chosenSinkLabel=e.target.options[e.target.selectedIndex].text;
     var ok=await applySink(chosenSink); persistSettings();
     $("sinkCurrent").textContent = ok ? ("Uscita: "+chosenSinkLabel) : "⚠️ Impossibile cambiare uscita su questo dispositivo.";
+    updateOutputLabel();
   });
   $("sinkPick").addEventListener("click", async function(){
     ensureAudio();
@@ -761,8 +771,30 @@
       chosenSink=info.deviceId; chosenSinkLabel=info.label||"dispositivo scelto";
       var ok=await applySink(chosenSink); persistSettings();
       $("sinkCurrent").textContent = ok ? ("Uscita attuale: "+chosenSinkLabel) : "⚠️ Non riesco a usare questo dispositivo.";
+      updateOutputLabel();
     }catch(e){ /* annullato dall'utente */ }
   });
+
+  // ---------- riga informativa: uscita audio corrente (sempre visibile) ----------
+  async function updateOutputLabel(){
+    var el=$("outText"); if(!el) return;
+    if(!SINK_SETSINK){ el.textContent="gestita dal sistema"; return; }   // iOS/Safari/Firefox
+    if(chosenSink){ el.textContent = chosenSinkLabel || "dispositivo scelto"; return; }
+    var name="predefinita del sistema";
+    if(SINK_ENUM){
+      try{
+        var devs=await navigator.mediaDevices.enumerateDevices();
+        var outs=devs.filter(function(d){return d.kind==="audiooutput"});
+        var def=outs.filter(function(d){return d.deviceId==="default" && d.label})[0] || outs.filter(function(d){return d.label})[0];
+        if(def && def.label) name=def.label;
+      }catch(e){}
+    }
+    el.textContent=name;
+  }
+  $("outBadge").addEventListener("click", openPanel);
+  if(navigator.mediaDevices && navigator.mediaDevices.addEventListener){
+    try{ navigator.mediaDevices.addEventListener("devicechange", updateOutputLabel); }catch(e){}
+  }
 
   $("save").addEventListener("click", function(){
     var np=parsePhon($("phonText").value); if(np.length) phon=np;
@@ -823,6 +855,7 @@
   // perché iOS blocca l'audio dei contesti creati senza un'interazione dell'utente.
   render();
   detectEngine();
+  updateOutputLabel();
 })();
 </script>
 
