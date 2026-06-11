@@ -132,8 +132,12 @@
   .engine{font-size:.74rem;color:var(--muted);text-align:center;display:flex;align-items:center;gap:.35rem;justify-content:center;opacity:.85}
   .engine .ed{width:8px;height:8px;border-radius:50%;background:var(--idle)}
   .engine.cloud .ed{background:var(--wait)}
-  .outbadge{border:0;background:transparent;font:inherit;cursor:pointer;margin-top:.15rem}
+  .outwrap{margin-top:.15rem}
+  .outbadge{border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:9px}
+  .outbadge:hover{background:var(--idle-soft)}
   .outbadge:active{transform:translateY(1px)}
+  .outbadge .caret{opacity:.6;font-size:.62rem}
+  .outsel{display:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter';font-size:.78rem;border-radius:9px;padding:.2rem .4rem;max-width:280px}
   .typebox{display:none;width:min(640px,92vw);gap:.5rem}
   .typebox input{flex:1;border:2px solid var(--line);border-radius:14px;padding:.8rem 1rem;font-size:16px;font-family:'Inter';outline:none}
   .typebox input:focus{border-color:var(--wait)}
@@ -208,7 +212,10 @@
 
   <div class="hint" id="hint"><kbd>Barra</kbd> ascolta · <kbd>←</kbd> <kbd>→</kbd> scorri</div>
   <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">controllo voce…</span></div>
-  <button class="engine outbadge" id="outBadge" type="button" title="Uscita audio (tocca per le impostazioni)">🔈 <span id="outText">uscita…</span></button>
+  <div class="engine outwrap">
+    <button class="outbadge" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
+    <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
+  </div>
 </main>
 
 <!-- impostazioni -->
@@ -237,13 +244,6 @@
       <button class="ghostbtn" id="sinkPick" type="button">🔈 Scegli dispositivo di uscita…</button>
       <button class="ghostbtn" id="sinkAir" type="button">📡 AirPlay / uscita (iPhone)…</button>
       <div class="curout" id="sinkCurrent"></div>
-      <label style="margin-top:.9rem">Metodo audio (sperimentale)</label>
-      <small>Su iPhone prova <b>A</b> e <b>B</b> per vedere quale fa uscire davvero il suono dal dispositivo scelto, poi dimmi quale tenere.</small>
-      <select id="outMethodSel">
-        <option value="std">Standard (consigliato)</option>
-        <option value="elem">Prova A — elemento audio</option>
-        <option value="bridge">Prova B — ponte Web Audio</option>
-      </select>
     </div>
 
     <div class="field">
@@ -304,13 +304,18 @@
   var currentVoice = VALID_VOICES.indexOf(saved.voice)>=0 ? saved.voice : DEF_VOICE;
   var chosenSink = typeof saved.sink==="string" ? saved.sink : "";        // deviceId uscita audio
   var chosenSinkLabel = typeof saved.sinkLabel==="string" ? saved.sinkLabel : "";
-  var outMethod = (["std","elem","bridge"].indexOf(saved.outMethod)>=0) ? saved.outMethod : "std"; // metodo di uscita (sperimentale)
+  // Metodo di uscita: su iOS (AirPlay disponibile, setSinkId no) l'audio passa da un
+  // "ponte" Web Audio → MediaStream → <audio>, così il selettore AirPlay può dirottarlo.
+  // Altrove si usa l'uscita standard di Web Audio. (Scelto dopo test sul campo.)
+  var outMethod = (window.HTMLMediaElement && HTMLMediaElement.prototype && ("webkitShowPlaybackTargetPicker" in HTMLMediaElement.prototype)
+                   && !(window.AudioContext && window.AudioContext.prototype && ("setSinkId" in window.AudioContext.prototype)))
+                  ? "bridge" : "std";
 
   var phon  = loadJSON(LS.phon, null)  || DEF_PHON.slice();
   var words = loadJSON(LS.words, null) || DEF_WORDS.slice();
 
   function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
-  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel, outMethod:outMethod}); }
+  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
 
   // ---------- stato ----------
   var mode = "phon";   // phon | word | say
@@ -353,7 +358,7 @@
         return;
       }
     }
-    masterGain.connect(audioCtx.destination);   // "std" ed "elem" (in elem i clip suonano via sinkEl.src)
+    masterGain.connect(audioCtx.destination);   // uscita standard
   }
 
   // Va chiamata DENTRO un gesto dell'utente (tap/tasto): crea il contesto al primo
@@ -398,9 +403,8 @@
     });
     if(!res.ok) throw new Error("tts http "+res.status);
     var arr = await res.arrayBuffer();
-    var blobUrl = URL.createObjectURL(new Blob([arr], {type: res.headers.get("Content-Type")||"audio/mpeg"}));
-    var audioBuf = await audioCtx.decodeAudioData(arr);   // (arr viene "consumato" qui: il Blob è già una copia)
-    var clip = { buffer:audioBuf, gain:1, blobUrl:blobUrl };
+    var audioBuf = await audioCtx.decodeAudioData(arr);
+    var clip = { buffer:audioBuf, gain:1 };
     cache.set(k, clip);
     return clip;
   }
@@ -467,9 +471,8 @@
     var r = await fetch(url);
     if(!r.ok) return null;
     var arr = await r.arrayBuffer();
-    var blobUrl = URL.createObjectURL(new Blob([arr], {type: r.headers.get("Content-Type")||"audio/wav"}));
     var ab = await audioCtx.decodeAudioData(arr);
-    var entry = { buffer: ab, gain: computeNormGain(ab), blobUrl: blobUrl };
+    var entry = { buffer: ab, gain: computeNormGain(ab) };
     bufByUrl.set(url, entry);
     return entry;
   }
@@ -492,25 +495,12 @@
   // ---------- riproduzione ----------
   function stopCurrent(){
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
-    // in modalità "elem" l'audio suona via sinkEl.src: va fermato. In "bridge" no:
-    // lì sinkEl riproduce lo stream continuo del ponte e non va messo in pausa.
-    if(sinkEl && outMethod==="elem"){ try{ sinkEl.onended=null; sinkEl.pause(); }catch(e){} }
     if('speechSynthesis' in window) speechSynthesis.cancel();
   }
-  // Riproduce un "clip" ({buffer,gain,blobUrl}) col metodo di uscita attivo.
+  // Riproduce un "clip" ({buffer,gain}).
   async function playClip(clip, mid, after){
     if(!clip) return;
-    if(outMethod==="elem" && clip.blobUrl){ return playViaElement(clip.blobUrl, mid, after); }
     return playBuffer(clip.buffer, mid, after, clip.gain);
-  }
-  // Riproduzione tramite elemento <audio> (abilita AirPlay/scelta uscita su iOS).
-  async function playViaElement(blobUrl, mid, after){
-    stopCurrent();
-    var el = ensureSinkEl();
-    el.srcObject = null; el.src = blobUrl; el.volume = volume;
-    el.onended = function(){ setBars(""); if(after) after(); };
-    setBars("playing"); if(mid) setStatus.apply(null, mid);
-    try{ await el.play(); }catch(e){ setBars(""); }
   }
   // Indica quale voce è in uso. `detail` (es. "Umana · LangPao") mostra QUALE voce
   // sta parlando tra le varie opzioni; se assente, mostra l'etichetta generica.
@@ -805,8 +795,8 @@
     if(sinkEl && typeof sinkEl.setSinkId==="function"){ try{ await sinkEl.setSinkId(id||""); ok=true; }catch(e){} }
     return ok;
   }
-  async function refreshSinks(){
-    var sel=$("sinkSel"); sel.innerHTML="";
+  async function fillSinkSelect(sel){
+    sel.innerHTML="";
     var def=document.createElement("option"); def.value=""; def.textContent="Predefinito del sistema"; sel.appendChild(def);
     try{
       var devs=await navigator.mediaDevices.enumerateDevices();
@@ -818,9 +808,9 @@
     }catch(e){}
     sel.value=chosenSink||"";
   }
+  function refreshSinks(){ return fillSinkSelect($("sinkSel")); }
   function setupSinkUI(){
-    var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent"), air=$("sinkAir"), m=$("outMethodSel");
-    if(m) m.value = outMethod;
+    var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent"), air=$("sinkAir");
     air.style.display = SINK_AIRPLAY ? "block" : "none";   // AirPlay = di fatto solo iOS/Safari
     if(SINK_SETSINK){
       note.textContent="Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).";
@@ -832,10 +822,11 @@
         if(SINK_ENUM) refreshSinks();
       }
     } else {
-      // iOS/Safari: niente setSinkId. Resta l'AirPlay (sperimentale) + le impostazioni di sistema.
+      // iOS/Safari: niente setSinkId. L'uscita si sceglie con AirPlay (l'audio passa
+      // già dal "ponte") oppure dalle impostazioni di sistema.
       sel.style.display="none"; pick.style.display="none";
       note.innerHTML = SINK_AIRPLAY
-        ? "Su iPhone: imposta il <b>Metodo</b> su Prova A o B, poi usa <b>📡 AirPlay</b> qui sotto per scegliere l'uscita. In alternativa, dal sistema (Centro di Controllo / Bluetooth)."
+        ? "Tocca <b>📡 AirPlay</b> e scegli dove far uscire il suono (altoparlante, Bluetooth…). In alternativa, dal sistema (Centro di Controllo / Bluetooth)."
         : "Su questo dispositivo l'uscita audio si sceglie dalle <b>impostazioni di sistema</b> (Centro di Controllo → AirPlay, o Bluetooth).";
     }
   }
@@ -856,25 +847,18 @@
       updateOutputLabel();
     }catch(e){ /* annullato dall'utente */ }
   });
-  // Metodo audio (sperimentale): cambia come l'audio raggiunge l'uscita.
-  $("outMethodSel").addEventListener("change", function(e){
-    outMethod = e.target.value; persistSettings();
-    ensureAudio(); routeMasterGain();
-    if(chosenSink) applySink(chosenSink);
-    $("sinkCurrent").textContent = "Metodo: " + e.target.options[e.target.selectedIndex].text;
-  });
-  // AirPlay / route picker (iOS): apre il selettore di sistema sull'elemento <audio>.
+  // AirPlay / route picker (iOS): apre il selettore di sistema sull'elemento <audio>
+  // del ponte (l'audio dell'app ci passa già, quindi la scelta vale per tutto).
   $("sinkAir").addEventListener("click", function(){
     ensureAudio(); var el=ensureSinkEl();
     if(typeof el.webkitShowPlaybackTargetPicker!=="function"){ $("sinkCurrent").textContent="AirPlay non disponibile su questo browser."; return; }
-    if(outMethod==="std"){ $("sinkCurrent").textContent="Per l'AirPlay imposta prima il Metodo su «Prova A» o «Prova B», poi ripremi."; return; }
     try{ el.webkitShowPlaybackTargetPicker(); }catch(e){}
   });
 
   // ---------- riga informativa: uscita audio corrente (sempre visibile) ----------
   async function updateOutputLabel(){
     var el=$("outText"); if(!el) return;
-    if(!SINK_SETSINK){ el.textContent="gestita dal sistema"; return; }   // iOS/Safari/Firefox
+    if(!SINK_SETSINK){ el.textContent = SINK_AIRPLAY ? "uscita audio" : "gestita dal sistema"; return; }   // iOS: tocca = AirPlay
     if(chosenSink){ el.textContent = chosenSinkLabel || "dispositivo scelto"; return; }
     var name="predefinita del sistema";
     if(SINK_ENUM){
@@ -887,7 +871,41 @@
     }
     el.textContent=name;
   }
-  $("outBadge").addEventListener("click", openPanel);
+  // Il badge in basso È il selettore d'uscita: comportamento adatto alla piattaforma.
+  $("outBadge").addEventListener("click", async function(){
+    ensureAudio();
+    if(SINK_PICK){
+      // Chrome desktop: selettore nativo con i nomi dei dispositivi
+      try{
+        var info=await navigator.mediaDevices.selectAudioOutput();
+        chosenSink=info.deviceId; chosenSinkLabel=info.label||"dispositivo scelto";
+        await applySink(chosenSink); persistSettings(); updateOutputLabel();
+      }catch(e){ /* annullato */ }
+      return;
+    }
+    if(!SINK_SETSINK && SINK_AIRPLAY){
+      // iPhone/iPad: apre direttamente il selettore AirPlay di sistema
+      var el=ensureSinkEl();
+      try{ el.webkitShowPlaybackTargetPicker(); }catch(e){}
+      return;
+    }
+    if(SINK_SETSINK && SINK_ENUM){
+      // Edge & co.: tendina leggera al posto del badge
+      var sel=$("outSelMain");
+      await fillSinkSelect(sel);
+      $("outBadge").style.display="none"; sel.style.display="inline-block"; sel.focus();
+      return;
+    }
+    openPanel(); // ultimo ripiego
+  });
+  $("outSelMain").addEventListener("change", async function(e){
+    chosenSink=e.target.value; chosenSinkLabel=e.target.options[e.target.selectedIndex].text;
+    await applySink(chosenSink); persistSettings(); updateOutputLabel();
+    e.target.style.display="none"; $("outBadge").style.display="inline-flex";
+  });
+  $("outSelMain").addEventListener("blur", function(e){
+    e.target.style.display="none"; $("outBadge").style.display="inline-flex";
+  });
   if(navigator.mediaDevices && navigator.mediaDevices.addEventListener){
     try{ navigator.mediaDevices.addEventListener("devicechange", updateOutputLabel); }catch(e){}
   }
