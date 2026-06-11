@@ -35,6 +35,11 @@ si sente nulla, si capisce cosa sta facendo l'app) e gli stessi comandi:
 
 Il volume usa la **Web Audio API (GainNode)**, così funziona anche su iOS Safari.
 
+**Uscita audio:** nelle impostazioni (⚙) si può scegliere il dispositivo di uscita
+(altoparlante, cuffie, Bluetooth…) su **Chrome/Edge desktop**. Su **iPhone/iPad** il
+web non può cambiarla: l'uscita si sceglie dalle impostazioni di sistema (Centro di
+Controllo → AirPlay, o Bluetooth).
+
 ## Struttura del progetto
 
 ```

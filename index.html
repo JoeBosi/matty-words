@@ -148,6 +148,9 @@
   .field small{color:var(--muted);font-weight:400;display:block;margin-bottom:.4rem}
   .field textarea{width:100%;min-height:120px;border:2px solid var(--line);border-radius:12px;padding:.7rem;font-family:'Inter';font-size:16px;resize:vertical}
   .field select{width:100%;border:2px solid var(--line);border-radius:12px;padding:.6rem .7rem;font-family:'Inter';font-size:1rem;background:var(--surface);color:var(--ink)}
+  .ghostbtn{width:100%;margin-top:.5rem;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:.6rem .7rem;font-family:'Inter';font-weight:600;font-size:.95rem;cursor:pointer}
+  .ghostbtn:active{transform:translateY(1px)}
+  .curout{font-size:.82rem;color:var(--wait);font-weight:600;margin-top:.4rem;min-height:1em}
   .field input[type=range]{width:100%}
   .rate-val,.vol-val{font-weight:600;color:var(--wait)}
   .enginebox{font-size:.82rem;color:var(--muted);background:var(--idle-soft);border-radius:12px;padding:.6rem .7rem;margin-bottom:1.1rem;line-height:1.4}
@@ -224,6 +227,14 @@
       </select>
     </div>
 
+    <div class="field" id="sinkField">
+      <label>Uscita audio</label>
+      <small id="sinkNote">Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).</small>
+      <select id="sinkSel"></select>
+      <button class="ghostbtn" id="sinkPick" type="button">🔈 Scegli dispositivo di uscita…</button>
+      <div class="curout" id="sinkCurrent"></div>
+    </div>
+
     <div class="field">
       <label>Volume <span class="vol-val" id="volVal">100%</span></label>
       <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
@@ -280,12 +291,14 @@
   var rate   = clampNum(saved.rate, 0.5, 1.2, 0.9);
   var volume = clampNum(saved.volume, 0, 1, 1);
   var currentVoice = VALID_VOICES.indexOf(saved.voice)>=0 ? saved.voice : DEF_VOICE;
+  var chosenSink = typeof saved.sink==="string" ? saved.sink : "";        // deviceId uscita audio
+  var chosenSinkLabel = typeof saved.sinkLabel==="string" ? saved.sinkLabel : "";
 
   var phon  = loadJSON(LS.phon, null)  || DEF_PHON.slice();
   var words = loadJSON(LS.words, null) || DEF_WORDS.slice();
 
   function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
-  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice}); }
+  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
 
   // ---------- stato ----------
   var mode = "phon";   // phon | word | say
@@ -314,6 +327,8 @@
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
       masterGain.connect(audioCtx.destination);
+      // riapplica l'uscita audio scelta in precedenza (se supportata)
+      if(chosenSink && typeof audioCtx.setSinkId==="function"){ audioCtx.setSinkId(chosenSink).catch(function(){}); }
     }
     if(audioCtx.state !== "running"){ audioCtx.resume(); }
     if(!audioUnlocked){
@@ -680,6 +695,8 @@
     $("voiceSel").value=currentVoice;
     $("phonText").value=phon.map(function(p){return p.label+" | "+p.say}).join("\n");
     $("wordText").value=words.join("\n");
+    ensureAudio();      // il click sull'ingranaggio è un gesto: ok per audio/setSinkId
+    setupSinkUI();
     panel.classList.add("show");
   }
   $("gear").addEventListener("click", openPanel);
@@ -689,6 +706,63 @@
   $("rate").addEventListener("input", function(e){ rate=parseFloat(e.target.value); $("rateVal").textContent=rate.toFixed(2)+"×"; });
   $("vol").addEventListener("input", function(e){ ensureAudio(); setVolume(parseFloat(e.target.value)); $("volVal").textContent=Math.round(volume*100)+"%"; });
   $("voiceSel").addEventListener("change", function(e){ currentVoice=e.target.value; });
+
+  // ---------- uscita audio (scelta del dispositivo di output) ----------
+  var SINK_SETSINK = !!(window.AudioContext && window.AudioContext.prototype && ("setSinkId" in window.AudioContext.prototype));
+  var SINK_PICK    = !!(navigator.mediaDevices && navigator.mediaDevices.selectAudioOutput);
+  var SINK_ENUM    = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
+
+  async function applySink(id){
+    if(!audioCtx || typeof audioCtx.setSinkId!=="function") return false;
+    try{ await audioCtx.setSinkId(id||""); return true; }catch(e){ return false; }
+  }
+  async function refreshSinks(){
+    var sel=$("sinkSel"); sel.innerHTML="";
+    var def=document.createElement("option"); def.value=""; def.textContent="Predefinito del sistema"; sel.appendChild(def);
+    try{
+      var devs=await navigator.mediaDevices.enumerateDevices();
+      devs.filter(function(d){return d.kind==="audiooutput"}).forEach(function(d,i){
+        if(d.deviceId==="default"||d.deviceId==="") return;
+        var o=document.createElement("option"); o.value=d.deviceId;
+        o.textContent=d.label || ("Uscita "+(i+1)); sel.appendChild(o);
+      });
+    }catch(e){}
+    sel.value=chosenSink||"";
+  }
+  function setupSinkUI(){
+    var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent");
+    if(!SINK_SETSINK){
+      // iOS/Safari/Firefox: non si può scegliere dal web
+      sel.style.display="none"; pick.style.display="none"; cur.textContent="";
+      note.innerHTML="Su questo dispositivo l'uscita audio si sceglie dalle <b>impostazioni di sistema</b> (es. Centro di Controllo → AirPlay, o Bluetooth). Le app web non possono cambiarla.";
+      return;
+    }
+    note.textContent="Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).";
+    if(SINK_PICK){
+      // Chrome: selettore nativo, mostra nomi senza permessi
+      sel.style.display="none"; pick.style.display="block";
+      cur.textContent = chosenSinkLabel ? ("Uscita attuale: "+chosenSinkLabel) : "";
+    } else {
+      // fallback: elenco a discesa (i nomi potrebbero essere generici senza permessi)
+      pick.style.display="none"; sel.style.display="block";
+      if(SINK_ENUM) refreshSinks();
+    }
+  }
+  $("sinkSel").addEventListener("change", async function(e){
+    ensureAudio();
+    chosenSink=e.target.value; chosenSinkLabel=e.target.options[e.target.selectedIndex].text;
+    var ok=await applySink(chosenSink); persistSettings();
+    $("sinkCurrent").textContent = ok ? ("Uscita: "+chosenSinkLabel) : "⚠️ Impossibile cambiare uscita su questo dispositivo.";
+  });
+  $("sinkPick").addEventListener("click", async function(){
+    ensureAudio();
+    try{
+      var info=await navigator.mediaDevices.selectAudioOutput();
+      chosenSink=info.deviceId; chosenSinkLabel=info.label||"dispositivo scelto";
+      var ok=await applySink(chosenSink); persistSettings();
+      $("sinkCurrent").textContent = ok ? ("Uscita attuale: "+chosenSinkLabel) : "⚠️ Non riesco a usare questo dispositivo.";
+    }catch(e){ /* annullato dall'utente */ }
+  });
 
   $("save").addEventListener("click", function(){
     var np=parsePhon($("phonText").value); if(np.length) phon=np;

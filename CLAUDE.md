@@ -59,7 +59,10 @@ Serve perché se l'utente non sente, deve comunque capire lo stato (suono sì / 
    la parola (che viene comunque mostrata e pronunciata).
 
 ## Impostazioni (icona ⚙)
-- Scelta voce (4 voci Azure quando il cloud è attivo).
+- Scelta voce (4 voci neurali).
+- **Uscita audio**: scelta del dispositivo di output via `AudioContext.setSinkId`
+  (Chrome/Edge desktop; `selectAudioOutput()` se disponibile). Su iOS/Safari non è
+  possibile dal web → si mostra una nota che rimanda alle impostazioni di sistema.
 - Volume (Web Audio GainNode) e velocità della voce (rate, default 0.9).
 - Editor liste fonemi e parole. Tutto salvato in localStorage.
 
