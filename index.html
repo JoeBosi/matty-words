@@ -138,6 +138,17 @@
   .outbadge:active{transform:translateY(1px)}
   .outbadge .caret{opacity:.6;font-size:.62rem}
   .outsel{display:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter';font-size:.78rem;border-radius:9px;padding:.2rem .4rem;max-width:280px}
+
+  /* avviso installazione PWA (Android/iOS) */
+  .installbar{
+    width:min(640px,92vw);display:flex;align-items:center;gap:.6rem;
+    background:var(--surface);border-radius:14px;box-shadow:var(--shadow);
+    padding:.6rem .8rem;font-size:.85rem;color:var(--ink);
+  }
+  .installbar[hidden]{display:none}
+  .installbar .it{flex:1;line-height:1.35}
+  .installbar .ib{border:0;background:var(--wait);color:#fff;border-radius:10px;padding:.45rem .8rem;font-family:'Fredoka';font-weight:600;font-size:.85rem;cursor:pointer}
+  .installbar .ic{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;line-height:1;padding:.2rem}
   .typebox{display:none;width:min(640px,92vw);gap:.5rem}
   .typebox input{flex:1;border:2px solid var(--line);border-radius:14px;padding:.8rem 1rem;font-size:16px;font-family:'Inter';outline:none}
   .typebox input:focus{border-color:var(--wait)}
@@ -212,6 +223,12 @@
 
   <div class="hint" id="hint"><kbd>Barra</kbd> ascolta · <kbd>←</kbd> <kbd>→</kbd> scorri</div>
   <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">controllo voce…</span></div>
+  <div class="installbar" id="installBar" hidden>
+    <span class="it" id="installText"></span>
+    <button class="ib" id="installBtn" hidden>Installa</button>
+    <button class="ic" id="installClose" aria-label="Chiudi">×</button>
+  </div>
+
   <div class="engine outwrap">
     <button class="outbadge" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
     <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
@@ -971,6 +988,40 @@
   render();
   detectEngine();
   updateOutputLabel();
+
+  // ---------- avviso installazione PWA (Android/iOS) ----------
+  (function(){
+    var bar=$("installBar"), txt=$("installText"), btn=$("installBtn"), cls=$("installClose");
+    var DISMISS_KEY="aa.installDismissed.v1";
+    var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone===true;
+    if(standalone) return;                                   // già installata
+    try{ if(localStorage.getItem(DISMISS_KEY)) return; }catch(e){}
+    var ua=navigator.userAgent||"";
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    var isAndroid = /Android/.test(ua);
+    function dismiss(){ bar.hidden=true; try{ localStorage.setItem(DISMISS_KEY,"1"); }catch(e){} }
+    cls.addEventListener("click", dismiss);
+
+    if(isAndroid){
+      // Android/Chrome: aspetta il prompt nativo e offri il pulsante "Installa"
+      var deferred=null;
+      window.addEventListener("beforeinstallprompt", function(e){
+        e.preventDefault(); deferred=e;
+        txt.textContent="Installa Matty Words sul telefono: si apre a schermo intero, con la sua icona.";
+        btn.hidden=false; bar.hidden=false;
+      });
+      btn.addEventListener("click", function(){
+        if(!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function(){ deferred=null; bar.hidden=true; });
+      });
+      window.addEventListener("appinstalled", function(){ bar.hidden=true; });
+    } else if(isIOS){
+      // iOS: niente prompt automatico — istruzioni per Safari
+      txt.innerHTML="Per installare l'app: tocca <b>Condividi</b> (riquadro con freccia ⬆️) e poi <b>«Aggiungi a schermata Home»</b>.";
+      bar.hidden=false;
+    }
+  })();
 })();
 </script>
 
