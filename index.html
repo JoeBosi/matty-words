@@ -223,10 +223,10 @@
       <label for="voiceSel">Voce dei fonemi</label>
       <small>Voce neurale per i fonemi/lettere. Le <b>parole</b> usano invece voci a rotazione casuale (umane + neurali).</small>
       <select id="voiceSel">
-        <option value="it-IT-IsabellaNeural">Isabella — femminile</option>
-        <option value="it-IT-ElsaNeural">Elsa — femminile</option>
-        <option value="it-IT-DiegoNeural">Diego — maschile</option>
-        <option value="it-IT-GiuseppeMultilingualNeural">Giuseppe — maschile</option>
+        <option value="it-IT-DiegoNeural">Goku</option>
+        <option value="it-IT-GiuseppeMultilingualNeural">Vegeta</option>
+        <option value="it-IT-IsabellaNeural">Bulma</option>
+        <option value="it-IT-ElsaNeural">Crilin</option>
       </select>
     </div>
 
@@ -235,7 +235,15 @@
       <small id="sinkNote">Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).</small>
       <select id="sinkSel"></select>
       <button class="ghostbtn" id="sinkPick" type="button">🔈 Scegli dispositivo di uscita…</button>
+      <button class="ghostbtn" id="sinkAir" type="button">📡 AirPlay / uscita (iPhone)…</button>
       <div class="curout" id="sinkCurrent"></div>
+      <label style="margin-top:.9rem">Metodo audio (sperimentale)</label>
+      <small>Su iPhone prova <b>A</b> e <b>B</b> per vedere quale fa uscire davvero il suono dal dispositivo scelto, poi dimmi quale tenere.</small>
+      <select id="outMethodSel">
+        <option value="std">Standard (consigliato)</option>
+        <option value="elem">Prova A — elemento audio</option>
+        <option value="bridge">Prova B — ponte Web Audio</option>
+      </select>
     </div>
 
     <div class="field">
@@ -296,12 +304,13 @@
   var currentVoice = VALID_VOICES.indexOf(saved.voice)>=0 ? saved.voice : DEF_VOICE;
   var chosenSink = typeof saved.sink==="string" ? saved.sink : "";        // deviceId uscita audio
   var chosenSinkLabel = typeof saved.sinkLabel==="string" ? saved.sinkLabel : "";
+  var outMethod = (["std","elem","bridge"].indexOf(saved.outMethod)>=0) ? saved.outMethod : "std"; // metodo di uscita (sperimentale)
 
   var phon  = loadJSON(LS.phon, null)  || DEF_PHON.slice();
   var words = loadJSON(LS.words, null) || DEF_WORDS.slice();
 
   function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
-  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
+  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel, outMethod:outMethod}); }
 
   // ---------- stato ----------
   var mode = "phon";   // phon | word | say
@@ -320,6 +329,33 @@
 
   // ---------- Web Audio (volume tramite GainNode: funziona anche su iOS) ----------
   var audioCtx=null, masterGain=null, currentSource=null, audioUnlocked=false;
+  var sinkEl=null, mediaDest=null;   // elemento <audio> e "ponte" per la scelta uscita (sperimentale)
+
+  function ensureSinkEl(){
+    if(!sinkEl){
+      sinkEl = new Audio();
+      sinkEl.setAttribute("playsinline","");
+      sinkEl.preload = "auto";
+    }
+    return sinkEl;
+  }
+  // Collega masterGain in base al metodo di uscita scelto.
+  function routeMasterGain(){
+    if(!masterGain || !audioCtx) return;
+    try{ masterGain.disconnect(); }catch(e){}
+    if(outMethod==="bridge"){
+      if(!mediaDest){ try{ mediaDest = audioCtx.createMediaStreamDestination(); }catch(e){ mediaDest=null; } }
+      if(mediaDest){
+        masterGain.connect(mediaDest);
+        var el=ensureSinkEl(); el.srcObject = mediaDest.stream; el.volume = 1;
+        if(chosenSink && typeof el.setSinkId==="function"){ el.setSinkId(chosenSink).catch(function(){}); }
+        el.play().catch(function(){});
+        return;
+      }
+    }
+    masterGain.connect(audioCtx.destination);   // "std" ed "elem" (in elem i clip suonano via sinkEl.src)
+  }
+
   // Va chiamata DENTRO un gesto dell'utente (tap/tasto): crea il contesto al primo
   // tocco e lo sblocca suonando un buffer muto — è il metodo che funziona su iOS.
   function ensureAudio(){
@@ -329,9 +365,9 @@
       audioCtx = new AC();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
-      masterGain.connect(audioCtx.destination);
-      // riapplica l'uscita audio scelta in precedenza (se supportata)
-      if(chosenSink && typeof audioCtx.setSinkId==="function"){ audioCtx.setSinkId(chosenSink).catch(function(){}); }
+      routeMasterGain();
+      // riapplica l'uscita scelta (std: sul contesto)
+      if(chosenSink && outMethod==="std" && typeof audioCtx.setSinkId==="function"){ audioCtx.setSinkId(chosenSink).catch(function(){}); }
     }
     if(audioCtx.state !== "running"){ audioCtx.resume(); }
     if(!audioUnlocked){
@@ -362,9 +398,11 @@
     });
     if(!res.ok) throw new Error("tts http "+res.status);
     var arr = await res.arrayBuffer();
-    var audioBuf = await audioCtx.decodeAudioData(arr);
-    cache.set(k, audioBuf);
-    return audioBuf;
+    var blobUrl = URL.createObjectURL(new Blob([arr], {type: res.headers.get("Content-Type")||"audio/mpeg"}));
+    var audioBuf = await audioCtx.decodeAudioData(arr);   // (arr viene "consumato" qui: il Blob è già una copia)
+    var clip = { buffer:audioBuf, gain:1, blobUrl:blobUrl };
+    cache.set(k, clip);
+    return clip;
   }
 
   // ---------- registrazioni umane (Lingua Libre / Wikimedia Commons) ----------
@@ -429,16 +467,19 @@
     var r = await fetch(url);
     if(!r.ok) return null;
     var arr = await r.arrayBuffer();
+    var blobUrl = URL.createObjectURL(new Blob([arr], {type: r.headers.get("Content-Type")||"audio/wav"}));
     var ab = await audioCtx.decodeAudioData(arr);
-    var entry = { buffer: ab, gain: computeNormGain(ab) };
+    var entry = { buffer: ab, gain: computeNormGain(ab), blobUrl: blobUrl };
     bufByUrl.set(url, entry);
     return entry;
   }
   function humanKnown(word){ return Object.prototype.hasOwnProperty.call(humanUrls, (word||"").toLowerCase().trim()); }
 
   // Nome breve della voce TTS, ed estrazione dello speaker dall'URL di Lingua Libre.
-  var VOICE_SHORT = { "it-IT-IsabellaNeural":"Isabella", "it-IT-ElsaNeural":"Elsa",
-                      "it-IT-DiegoNeural":"Diego", "it-IT-GiuseppeMultilingualNeural":"Giuseppe" };
+  // Nomi "divertenti" in stile Dragon Ball (italiano). Le voci reali restano quelle
+  // neurali Microsoft: NON sono i veri doppiatori del cartone (non è possibile).
+  var VOICE_SHORT = { "it-IT-IsabellaNeural":"Bulma", "it-IT-ElsaNeural":"Crilin",
+                      "it-IT-DiegoNeural":"Goku", "it-IT-GiuseppeMultilingualNeural":"Vegeta" };
   function voiceShort(v){ return VOICE_SHORT[v] || v; }
   function speakerFromUrl(u){
     try{ var f=decodeURIComponent(u.split("/").pop()); var m=/\(ita\)-(.*)-[^-]+\.wav$/i.exec(f); return m ? m[1] : "voce umana"; }
@@ -451,7 +492,25 @@
   // ---------- riproduzione ----------
   function stopCurrent(){
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
+    // in modalità "elem" l'audio suona via sinkEl.src: va fermato. In "bridge" no:
+    // lì sinkEl riproduce lo stream continuo del ponte e non va messo in pausa.
+    if(sinkEl && outMethod==="elem"){ try{ sinkEl.onended=null; sinkEl.pause(); }catch(e){} }
     if('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+  // Riproduce un "clip" ({buffer,gain,blobUrl}) col metodo di uscita attivo.
+  async function playClip(clip, mid, after){
+    if(!clip) return;
+    if(outMethod==="elem" && clip.blobUrl){ return playViaElement(clip.blobUrl, mid, after); }
+    return playBuffer(clip.buffer, mid, after, clip.gain);
+  }
+  // Riproduzione tramite elemento <audio> (abilita AirPlay/scelta uscita su iOS).
+  async function playViaElement(blobUrl, mid, after){
+    stopCurrent();
+    var el = ensureSinkEl();
+    el.srcObject = null; el.src = blobUrl; el.volume = volume;
+    el.onended = function(){ setBars(""); if(after) after(); };
+    setBars("playing"); if(mid) setStatus.apply(null, mid);
+    try{ await el.play(); }catch(e){ setBars(""); }
   }
   // Indica quale voce è in uso. `detail` (es. "Umana · LangPao") mostra QUALE voce
   // sta parlando tra le varie opzioni; se assente, mostra l'etichetta generica.
@@ -505,10 +564,10 @@
           lastVoiceKey = voiceKey(opt);
           if(opt.type === "human"){
             var e = await bufferForUrl(opt.url);
-            if(e){ setEngine("human", "Umana · " + opt.name); playBuffer(e.buffer, mid, after, e.gain); return; }
+            if(e){ setEngine("human", "Umana · " + opt.name); playClip(e, mid, after); return; }
           } else {
-            var ab = await getBuffer(text, opt.voice, rate);
-            setEngine("cloud", "Microsoft · " + opt.name); playBuffer(ab, mid, after); return;
+            var clip = await getBuffer(text, opt.voice, rate);
+            setEngine("cloud", opt.name); playClip(clip, mid, after); return;
           }
         }
       }catch(e){ /* problemi di rete: ripiego sotto */ }
@@ -525,9 +584,9 @@
       try{
         var k = cacheKey(text, currentVoice, rate);
         if(!cache.has(k)){ setStatus("wait","Preparo l'audio…","⏳"); setBars("loading"); }
-        var audioBuf = await getBuffer(text, currentVoice, rate);
-        setEngine("cloud", "Microsoft · " + voiceShort(currentVoice));
-        playBuffer(audioBuf, mid, after);
+        var clip = await getBuffer(text, currentVoice, rate);
+        setEngine("cloud", voiceShort(currentVoice));
+        playClip(clip, mid, after);
         return;
       }catch(err){
         // problema di rete/quota: ripiego sulla voce del dispositivo per questa volta
@@ -738,10 +797,13 @@
   var SINK_SETSINK = !!(window.AudioContext && window.AudioContext.prototype && ("setSinkId" in window.AudioContext.prototype));
   var SINK_PICK    = !!(navigator.mediaDevices && navigator.mediaDevices.selectAudioOutput);
   var SINK_ENUM    = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
+  var SINK_AIRPLAY = !!(window.HTMLMediaElement && HTMLMediaElement.prototype && ("webkitShowPlaybackTargetPicker" in HTMLMediaElement.prototype));
 
   async function applySink(id){
-    if(!audioCtx || typeof audioCtx.setSinkId!=="function") return false;
-    try{ await audioCtx.setSinkId(id||""); return true; }catch(e){ return false; }
+    var ok=false;
+    if(audioCtx && outMethod==="std" && typeof audioCtx.setSinkId==="function"){ try{ await audioCtx.setSinkId(id||""); ok=true; }catch(e){} }
+    if(sinkEl && typeof sinkEl.setSinkId==="function"){ try{ await sinkEl.setSinkId(id||""); ok=true; }catch(e){} }
+    return ok;
   }
   async function refreshSinks(){
     var sel=$("sinkSel"); sel.innerHTML="";
@@ -757,22 +819,24 @@
     sel.value=chosenSink||"";
   }
   function setupSinkUI(){
-    var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent");
-    if(!SINK_SETSINK){
-      // iOS/Safari/Firefox: non si può scegliere dal web
-      sel.style.display="none"; pick.style.display="none"; cur.textContent="";
-      note.innerHTML="Su questo dispositivo l'uscita audio si sceglie dalle <b>impostazioni di sistema</b> (es. Centro di Controllo → AirPlay, o Bluetooth). Le app web non possono cambiarla.";
-      return;
-    }
-    note.textContent="Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).";
-    if(SINK_PICK){
-      // Chrome: selettore nativo, mostra nomi senza permessi
-      sel.style.display="none"; pick.style.display="block";
-      cur.textContent = chosenSinkLabel ? ("Uscita attuale: "+chosenSinkLabel) : "";
+    var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent"), air=$("sinkAir"), m=$("outMethodSel");
+    if(m) m.value = outMethod;
+    air.style.display = SINK_AIRPLAY ? "block" : "none";   // AirPlay = di fatto solo iOS/Safari
+    if(SINK_SETSINK){
+      note.textContent="Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).";
+      if(SINK_PICK){
+        sel.style.display="none"; pick.style.display="block";
+        cur.textContent = chosenSinkLabel ? ("Uscita attuale: "+chosenSinkLabel) : "";
+      } else {
+        pick.style.display="none"; sel.style.display="block";
+        if(SINK_ENUM) refreshSinks();
+      }
     } else {
-      // fallback: elenco a discesa (i nomi potrebbero essere generici senza permessi)
-      pick.style.display="none"; sel.style.display="block";
-      if(SINK_ENUM) refreshSinks();
+      // iOS/Safari: niente setSinkId. Resta l'AirPlay (sperimentale) + le impostazioni di sistema.
+      sel.style.display="none"; pick.style.display="none";
+      note.innerHTML = SINK_AIRPLAY
+        ? "Su iPhone: imposta il <b>Metodo</b> su Prova A o B, poi usa <b>📡 AirPlay</b> qui sotto per scegliere l'uscita. In alternativa, dal sistema (Centro di Controllo / Bluetooth)."
+        : "Su questo dispositivo l'uscita audio si sceglie dalle <b>impostazioni di sistema</b> (Centro di Controllo → AirPlay, o Bluetooth).";
     }
   }
   $("sinkSel").addEventListener("change", async function(e){
@@ -791,6 +855,20 @@
       $("sinkCurrent").textContent = ok ? ("Uscita attuale: "+chosenSinkLabel) : "⚠️ Non riesco a usare questo dispositivo.";
       updateOutputLabel();
     }catch(e){ /* annullato dall'utente */ }
+  });
+  // Metodo audio (sperimentale): cambia come l'audio raggiunge l'uscita.
+  $("outMethodSel").addEventListener("change", function(e){
+    outMethod = e.target.value; persistSettings();
+    ensureAudio(); routeMasterGain();
+    if(chosenSink) applySink(chosenSink);
+    $("sinkCurrent").textContent = "Metodo: " + e.target.options[e.target.selectedIndex].text;
+  });
+  // AirPlay / route picker (iOS): apre il selettore di sistema sull'elemento <audio>.
+  $("sinkAir").addEventListener("click", function(){
+    ensureAudio(); var el=ensureSinkEl();
+    if(typeof el.webkitShowPlaybackTargetPicker!=="function"){ $("sinkCurrent").textContent="AirPlay non disponibile su questo browser."; return; }
+    if(outMethod==="std"){ $("sinkCurrent").textContent="Per l'AirPlay imposta prima il Metodo su «Prova A» o «Prova B», poi ripremi."; return; }
+    try{ el.webkitShowPlaybackTargetPicker(); }catch(e){}
   });
 
   // ---------- riga informativa: uscita audio corrente (sempre visibile) ----------

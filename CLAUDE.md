@@ -59,10 +59,14 @@ Serve perché se l'utente non sente, deve comunque capire lo stato (suono sì / 
    la parola (che viene comunque mostrata e pronunciata).
 
 ## Impostazioni (icona ⚙)
-- Scelta voce (4 voci neurali).
-- **Uscita audio**: scelta del dispositivo di output via `AudioContext.setSinkId`
-  (Chrome/Edge desktop; `selectAudioOutput()` se disponibile). Su iOS/Safari non è
-  possibile dal web → si mostra una nota che rimanda alle impostazioni di sistema.
+- Scelta voce dei fonemi (4 voci neurali Microsoft con nomi "Dragon Ball": Goku/Vegeta=
+  maschili, Bulma/Crilin=femminili — solo etichette, non i veri doppiatori). Le PAROLE
+  usano una rosa casuale (umane Lingua Libre + le 4 voci TTS), senza ripetere la precedente;
+  in basso è mostrata la voce che sta parlando.
+- **Uscita audio**: scelta del dispositivo via `AudioContext.setSinkId` (Chrome/Edge
+  desktop; `selectAudioOutput()` se c'è). Metodi sperimentali per iOS: "Prova A" (clip via
+  elemento `<audio>`) e "Prova B" (ponte Web Audio→MediaStream→`<audio>`), con pulsante
+  AirPlay (`webkitShowPlaybackTargetPicker`). Su iOS lo standard non può scegliere l'uscita.
 - Volume (Web Audio GainNode) e velocità della voce (rate, default 0.9).
 - Editor liste fonemi e parole. Tutto salvato in localStorage.
 
