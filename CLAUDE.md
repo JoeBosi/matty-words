@@ -8,32 +8,52 @@ incluso chi è stato **attivato da poco** e sente ancora poco/nulla.
 **Non è un dispositivo medico**: è un supporto da affiancare al lavoro di
 logopedista/audiologo; percorso e risultati andrebbero condivisi con loro.
 
-## Architettura: PERCORSO a tappe (scala di Erber)
+## Principio guida: AUTONOMIA
+
+Chi si allena (bambino o adulto) usa l'app **da solo**: nessun esercizio richiede
+una seconda persona che osservi o giudichi. Per questo NON esistono più: lo Step 0
+«Mi senti?», il profilo bimbo/adulto, l'onboarding, il «Ripeti!» con adulto-giudice
+e l'ascolto nel rumore. Nessuna distinzione di età: un'unica app uguale per tutti.
+
+## Architettura: PERCORSO a tappe (scala di Erber) — TUTTE ATTIVE
 
 L'app è una **mappa di gioco** (una sola schermata, niente scroll) con 6 tappe.
-Profilo iniziale al primo avvio: bimbo/adulto + da quanto è attivo l'impianto
-(decide la tappa di partenza). Tutto salvato in localStorage.
+Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
 
-1. **f0 — 🔔 C'è un suono!** (consapevolezza) — suoni sintetici salienti (tamburo,
-   fischio, tono basso, generati con Web Audio: funzionano offline). Tocca quando senti.
-   8 prove. ATTIVA.
-2. **f1 — 🎵 Lo senti?** (detezione fine) — toni brevi/deboli a 250–4000 Hz,
-   20% prove "trabocchetto" (silenzio: successo = non toccare). 10 prove.
-   Include il **Check di Ling** (m·u·a·i·sc·s pronunciati dalla voce TTS; registra
-   quali frequenze sono percepite). ATTIVA.
-3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — si ascoltano due stimoli di fila e
-   si risponde UGUALI/DIVERSI (pulsanti nella barra comandi). Mix di soprasegmentali
-   (toni sintetici: lunghezza, altezza, numero di colpi) e coppie minime di parole TTS
-   (pane/cane, palla/balla, riso/viso, sale/sole, topo/capo). Tocco sul palco = riascolta
-   la coppia. 10 prove. f1 con ≥2⭐ sblocca f2. ATTIVA.
-4. **f3 — 👉 Indicalo!** (identificazione) — 2–4 carte con figure (emoji), tocca quella giusta. IN ARRIVO.
-5. **f4 — 🗣️ Ripeti!** (produzione) — normale (parola a schermo) e difficile (solo audio,
-   open-set); il microfono trascrive ma **l'adulto è il giudice** (✓/✗). IN ARRIVO.
-6. **f5 — 🧠 Capiscilo!** (comprensione) — ordini eseguibili, ascolto nel rumore. IN ARRIVO.
+1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni sintetici simpatici (campanello,
+   clacson, uccellini, toc toc, tamburo, fischio — Web Audio, funzionano offline).
+   Tocca quando senti → si RIVELA chi era (emoji) e vinci la **figurina**. 8 prove.
+2. **f1 — 🎵 Check di Ling** (detezione) — SOLO i 6 suoni di Ling (m·u·a·i·sc·s, voce
+   TTS): tocca quando senti la voce. Stelle in base ai sentiti/6.
+3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — due stimoli di fila, rispondi
+   UGUALI/DIVERSI (pulsanti nella barra comandi). Soprasegmentali + coppie minime TTS.
+   Filotto: 3+ giuste di fila → 🔥. Tocco sul palco = riascolta. 10 prove.
+4. **f3 — 👉 Indicalo!** (identificazione) — 2→4 carte con figure (emoji), tocca quella
+   detta. 3 volte giusta sulla stessa parola = **la carta entra nell'album**. 10 prove.
+5. **f4 — ✍️ Scrivilo!** (ascolto aperto, autonomo) — la parola NON si vede: la ascolti
+   e la SCRIVI. Confronto tollerante (maiuscole, accenti, 1 lettera nelle parole ≥5).
+   Risposta giusta = carta **dorata**. 8 prove. (Sostituisce «Ripeti!»: niente giudice.)
+6. **f5 — 🧠 Capiscilo!** (comprensione, SENZA rumore) — ordini eseguibili verificati
+   dall'app: «tocca il gatto», «… e poi il sole». Difficoltà = lunghezza frase (1→3
+   elementi), mai il rumore. 8 prove.
 
-Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); f0 con ≥2⭐ sblocca f1, f1 con ≥2⭐ sblocca f2.
-Mascotte: il logo Matty (SVG) che "respira" durante l'attesa; emoji per i feedback
-(🎉 sentito · 🙈 falso allarme · 💤 mancato · 🤫 trabocchetto superato · 🏆 traguardo).
+Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); ogni tappa con ≥2⭐ sblocca la successiva
+(f0→f1→f2→f3→f4→f5). Coriandoli (confettiBurst) a fine sessione con ≥2⭐.
+Mascotte: il logo Matty (SVG) che "respira" durante l'attesa.
+
+## Gamification: l'Album di Matty (📒 sulla mappa)
+
+Un'unica collezione attraversa l'app: **Suoni scoperti** (f0, una figurina per suono
+rivelato) e **Carte delle parole** (f3 = carta normale dopo 3 risposte giuste,
+f4 = carta dorata). Niente punti, monete, timer o classifiche — di proposito.
+localStorage `aa.album.v1` {sounds, words, wprog}.
+
+## Palestra (🎧 sulla mappa) — ascolto libero
+
+Il posto calmo SENZA punteggio: scorri lettere/parole con ‹ › (o frecce) e ascolti
+con tocco/Barra. Liste editabili in ⚙: fonemi `ETICHETTA | pronuncia` (es. `M | mmm`),
+parole `parola | emoji` (l'emoji serve per le carte di f3/f5). Le stesse liste
+alimentano f3/f4/f5. localStorage `aa.phon.v1`, `aa.words.v1`.
 
 ## Registro e "termometro" (etica)
 
@@ -53,8 +73,10 @@ Banner di stato SEMPRE visibile (icona+testo) — chi non sente deve capire lo s
 Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO la risposta.
 
 ## Comandi
-- **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" durante le prove.
-- Pulsanti: ‹ Mappa · Inizia/Ancora · Check di Ling (solo f1).
+- **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" (f0/f1) oppure
+  "risenti" (f2/f3/f4/f5, Palestra).
+- Pulsanti: ‹ Mappa · Inizia/Ancora (diventa «🔊 Risenti» durante f3/f4/f5) ·
+  Uguali/Diversi (f2) · ‹ › (Palestra).
 
 ## Stack
 - Statico + serverless per **Vercel**, file unico `index.html` (vanilla, no build).
@@ -77,9 +99,10 @@ Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO l
   dell'app (masterGain). Nessun suono più forte o più piano di un altro. I suoni sono
   generati come buffer (`makeSine/makeDrum/makeWhistle`) e suonati con `playSound`.
 - Voci TTS con nomi Dragon Ball: Goku/Vegeta (maschili), Chichi/Laura (femminili).
-- **Registrazioni umane** (Lingua Libre/Wikimedia, CC-BY-SA) torneranno nelle fasi
-  f2–f4 per le parole: il codice di ricerca/normalizzazione è in `VersioneUno`.
-- localStorage: `aa.settings.v1`, `aa.profile.v1`, `aa.progress.v1`, `aa.sessions.v1`.
+- **Registrazioni umane** (Lingua Libre/Wikimedia, CC-BY-SA) potranno tornare per le
+  parole: il codice di ricerca/normalizzazione è in `VersioneUno`.
+- localStorage: `aa.settings.v1`, `aa.progress.v1`, `aa.sessions.v1`, `aa.phon.v1`,
+  `aa.words.v1`, `aa.album.v1` (il vecchio `aa.profile.v1` viene rimosso all'avvio).
 
 ## Variabili d'ambiente
 Nessuna.
@@ -91,11 +114,11 @@ Nessuna.
 - `main` = versione 2 (percorso). - `VersioneUno` = vecchia app a 3 modalità (stabile).
 
 ## Backlog
-- [x] f2 Uguali/Diversi (coppie minime per contrasto, soprasegmentali). FATTA.
-- [ ] f3 Indicalo! (carte emoji, 2→4 alternative, somiglianza acustica crescente).
-- [ ] f4 Ripeti! (mic + adulto-giudice). f5 Capiscilo! (ordini, rumore graduale).
+- [x] f2 Uguali/Diversi, f3 Indicalo!, f4 Scrivilo!, f5 Capiscilo!: FATTE (tutte le tappe attive).
+- [x] Palestra (ascolto libero con liste editabili) e Album figurine: FATTI.
 - [ ] Difficoltà adattiva (ripeti gli errori, sali sopra l'80%).
 - [ ] Grafico dei progressi nel registro (oltre al CSV).
+- [ ] Somiglianza acustica crescente nei distrattori di f3 (ora sono casuali).
 - [ ] Modalità confronto microfono vs streaming Bluetooth (stesso esercizio, registri separati).
 
 ## Contesto

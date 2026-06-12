@@ -208,11 +208,48 @@
   .reglist{font-size:.82rem;line-height:1.5;background:var(--idle-soft);border-radius:12px;padding:.7rem .9rem;margin-bottom:.6rem;max-height:160px;overflow:auto}
   .regwarn{background:#FCEAE0;border-radius:12px;padding:.7rem .9rem;font-size:.84rem;color:#8a4a22;margin-bottom:.6rem}
 
-  /* onboarding */
-  .ob-opts{display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem}
-  .ob-opts button{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:.9rem;font-family:'Fredoka';font-weight:600;font-size:1.05rem;cursor:pointer;text-align:left}
-  .ob-opts button small{display:block;font-family:'Inter';font-weight:400;color:var(--muted);font-size:.8rem;margin-top:.15rem}
-  .ob-opts button:active{transform:translateY(1px)}
+  /* riga strumenti sotto la mappa */
+  .toolrow{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.4rem}
+  .toolrow .toolbtn{margin:0}
+
+  /* Palestra: schede Lettere/Parole */
+  .paltabs{display:flex;gap:.4rem;background:var(--idle-soft);border-radius:12px;padding:.22rem}
+  .palchip{border:0;background:transparent;cursor:pointer;font-family:'Fredoka';font-weight:600;font-size:.92rem;color:var(--muted);padding:.45rem .95rem;border-radius:9px}
+  .palchip[aria-pressed="true"]{background:var(--wait);color:#fff}
+  .palchip:active{transform:translateY(1px)}
+
+  /* carte con figure (f3 Indicalo!, f5 Capiscilo!) */
+  .cards{display:flex;gap:.7rem;flex-wrap:wrap;justify-content:center;width:100%}
+  .cardbtn{border:0;cursor:pointer;background:var(--idle-soft);border-radius:18px;box-shadow:var(--shadow);
+    font-size:clamp(2.4rem,9vw,3.4rem);line-height:1;padding:.7rem .9rem;min-width:84px;min-height:88px;
+    display:flex;align-items:center;justify-content:center;touch-action:manipulation;transition:transform .08s}
+  .cardbtn:active{transform:translateY(2px)}
+  .cardbtn.right{background:var(--wait-soft);outline:3px solid var(--wait)}
+  .cardbtn.wrong{background:#FDE7E7;outline:3px solid #C0392B}
+  .cardbtn.done{opacity:.45}
+
+  /* casella di scrittura (f4 Scrivilo!) */
+  .typerow{display:flex;gap:.5rem;width:100%;max-width:26rem}
+  .typerow input{flex:1;border:2px solid var(--line);border-radius:14px;padding:.8rem 1rem;font-size:16px;font-family:'Inter';outline:none;min-width:0}
+  .typerow input:focus{border-color:var(--wait)}
+  .typerow button{border:0;background:var(--wait);color:#fff;border-radius:14px;padding:0 1.2rem;font-family:'Fredoka';font-weight:600;font-size:1rem;cursor:pointer}
+  .typerow button:active{transform:translateY(1px)}
+  .field textarea{width:100%;border:2px solid var(--line);border-radius:12px;padding:.7rem;font-family:'Inter';font-size:16px;resize:vertical}
+
+  /* album delle figurine */
+  .albwrap{flex:1;overflow:auto;width:100%;min-height:0;padding:.2rem}
+  .albsec{font-family:'Fredoka';font-weight:600;font-size:.95rem;color:var(--muted);margin:.5rem 0 .4rem;text-align:center}
+  .albgrid{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+  .albitem{width:66px;height:76px;border-radius:14px;background:var(--idle-soft);display:flex;flex-direction:column;gap:.15rem;align-items:center;justify-content:center;font-size:1.7rem;line-height:1}
+  .albitem small{font-size:.55rem;color:var(--muted);font-weight:600;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .albitem.off{opacity:.35;filter:grayscale(1)}
+  .albitem.gold{background:#FFF3D6;outline:2px solid #E8B53B}
+
+  /* coriandoli di festa */
+  .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:30px;z-index:3}
+  .confetti span{position:absolute;top:-12%;font-size:1.5rem;animation:confall 1.8s ease-in forwards}
+  @keyframes confall{to{transform:translateY(125%) rotate(340deg);opacity:.15}}
+  @media (prefers-reduced-motion:reduce){.confetti span{animation-duration:.6s}}
 </style>
 </head>
 <body>
@@ -238,19 +275,37 @@
     <!-- SCHERMATA MAPPA -->
     <div class="mapwrap" id="screenMap">
       <div class="map-title">Il tuo percorso di ascolto</div>
-      <button class="toolbtn" id="msBtn">👋 Step 0 · Mi senti? <small>il primissimo test · osserva le reazioni</small></button>
       <svg class="map" id="mapSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
-      <button class="toolbtn" id="bandBtn">🎚️ Profilo di ascolto per banda <small>per il tecnico / audiologo</small></button>
+      <div class="toolrow">
+        <button class="toolbtn" id="palBtn">🎧 Palestra <small>ascolto libero</small></button>
+        <button class="toolbtn" id="albumBtn">📒 Album <small>le tue figurine</small></button>
+        <button class="toolbtn" id="bandBtn">🎚️ Profilo per banda <small>per il tecnico</small></button>
+      </div>
     </div>
 
     <!-- SCHERMATA ESERCIZIO -->
     <div id="screenPhase" style="display:none;flex-direction:column;align-items:center;gap:.7rem;width:100%">
       <div class="phase-title" id="phTitle"></div>
       <div class="phase-sub" id="phSub"></div>
+      <div class="paltabs" id="palTabs" style="display:none">
+        <button class="palchip" id="palPhon" aria-pressed="true">Lettere</button>
+        <button class="palchip" id="palWord" aria-pressed="false">Parole</button>
+      </div>
       <div class="trialinfo" id="phTrial"></div>
       <div class="bigemo" id="phEmo">🎧</div>
+      <div class="cards" id="cardsRow" style="display:none"></div>
+      <div class="typerow" id="typeRow" style="display:none">
+        <input id="typeInput" placeholder="Scrivi la parola che hai sentito" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button id="typeOk">OK</button>
+      </div>
       <div class="lingrow" id="lingRow" style="display:none"></div>
       <div class="spectrum" id="spectrum" style="display:none"></div>
+    </div>
+
+    <!-- SCHERMATA ALBUM -->
+    <div id="screenAlbum" style="display:none;flex-direction:column;width:100%;height:100%;min-height:0;gap:.5rem">
+      <div class="phase-title">📒 Album delle figurine</div>
+      <div class="albwrap" id="albumBody"></div>
     </div>
   </div>
 
@@ -261,8 +316,9 @@
 
   <div class="controls" id="phaseControls" style="display:none">
     <button class="nav" id="backMap">‹ Mappa</button>
+    <button class="nav" id="palPrev" style="display:none" aria-label="Precedente">‹</button>
     <button class="act" id="phStart">Inizia</button>
-    <button class="act secondary" id="phLing" style="display:none">Check di Ling</button>
+    <button class="nav" id="palNext" style="display:none" aria-label="Successivo">›</button>
     <button class="act secondary" id="ansSame" style="display:none">🟰 Uguali</button>
     <button class="act" id="ansDiff" style="display:none">↔️ Diversi</button>
   </div>
@@ -287,14 +343,6 @@
     </div>
   </div>
 </main>
-
-<!-- onboarding (primo avvio) -->
-<div class="panel" id="obPanel">
-  <div class="card">
-    <h2 id="obTitle">Chi si allena?</h2>
-    <div class="ob-opts" id="obOpts"></div>
-  </div>
-</div>
 
 <!-- librino: la scala dell'ascolto -->
 <div class="panel" id="infoPanel">
@@ -365,12 +413,22 @@
     </div>
 
     <div class="field">
+      <label>Lettere e suoni (Palestra)</label>
+      <small>Una riga per suono: <b>ETICHETTA | come pronunciarlo</b> (es. <code>M | mmm</code>) oppure solo la lettera.</small>
+      <textarea id="phonText" rows="5"></textarea>
+    </div>
+    <div class="field">
+      <label>Parole (Palestra, Indicalo!, Scrivilo!, Capiscilo!)</label>
+      <small>Una parola per riga. Con la figura: <b>parola | emoji</b> (es. <code>gatto | 🐱</code>) — la figura serve per le carte dei giochi.</small>
+      <textarea id="wordText" rows="6"></textarea>
+    </div>
+
+    <div class="field">
       <label>Registro delle sessioni</label>
       <small>Da mostrare alla logopedista. Confrontabile solo a parità di dispositivo, volume e uscita.</small>
       <div class="regwarn" id="regWarn" style="display:none"></div>
       <div class="reglist" id="regList">Nessuna sessione ancora.</div>
       <button class="ghostbtn" id="regCsv" type="button">⬇️ Scarica registro (CSV)</button>
-      <button class="ghostbtn" id="obRedo" type="button">👤 Cambia profilo (bimbo/adulto, fase di partenza)</button>
     </div>
   </div>
 </div>
@@ -380,8 +438,9 @@
   "use strict";
 
   // ============================== STATO E STORAGE ==============================
-  var LS = { settings:"aa.settings.v1", profile:"aa.profile.v1", progress:"aa.progress.v1",
-             sessions:"aa.sessions.v1", human:"aa.human.v2", installDismiss:"aa.installDismissed.v1" };
+  var LS = { settings:"aa.settings.v1", progress:"aa.progress.v1", sessions:"aa.sessions.v1",
+             phon:"aa.phon.v1", words:"aa.words.v1", album:"aa.album.v1",
+             installDismiss:"aa.installDismissed.v1" };
   function loadJSON(key, def){ try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; } }
   function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
   function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
@@ -401,11 +460,47 @@
   var earSide = (saved.earSide==="left"||saved.earSide==="right") ? saved.earSide : "both"; // left | right | both
   function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel, earSide:earSide}); }
 
-  var profile  = loadJSON(LS.profile, null);            // {type:'bimbo'|'adulto', stage:'nuovo'|'medio'|'esperto'}
   var progress = loadJSON(LS.progress, {stars:{}, unlocked:{f0:true}});
   var sessions = loadJSON(LS.sessions, []);             // [{t,phase,trials,hits,fa,detail,out,voice}]
   function persistProgress(){ saveJSON(LS.progress, progress); }
   function persistSessions(){ saveJSON(LS.sessions, sessions); }
+  try{ localStorage.removeItem("aa.profile.v1"); }catch(e){}   // profilo bimbo/adulto: rimosso
+
+  // ---- liste della Palestra (e dei giochi f3/f4/f5), editabili nelle impostazioni ----
+  var DEF_PHON = [
+    {label:"A", say:"a"}, {label:"E", say:"e"}, {label:"I", say:"i"},
+    {label:"O", say:"o"}, {label:"U", say:"u"},
+    {label:"M", say:"mmm"}, {label:"N", say:"nnn"}, {label:"S", say:"sss"},
+    {label:"F", say:"fff"}, {label:"V", say:"vvv"}, {label:"R", say:"rrr"},
+    {label:"L", say:"lll"}, {label:"SC", say:"sci"}
+  ];
+  var DEF_WORDS = [
+    {w:"gatto",e:"🐱"},{w:"cane",e:"🐶"},{w:"sole",e:"☀️"},{w:"casa",e:"🏠"},
+    {w:"palla",e:"⚽"},{w:"fiore",e:"🌸"},{w:"libro",e:"📖"},{w:"gelato",e:"🍦"},
+    {w:"mamma",e:"👩"},{w:"papà",e:"👨"},{w:"pane",e:"🍞"},{w:"latte",e:"🥛"},
+    {w:"scarpa",e:"👟"},{w:"pesce",e:"🐟"},{w:"mela",e:"🍎"},{w:"stella",e:"⭐"},
+    {w:"luna",e:"🌙"},{w:"treno",e:"🚂"},{w:"albero",e:"🌳"},{w:"acqua",e:"💧"}
+  ];
+  var phonList = loadJSON(LS.phon, null) || DEF_PHON.slice();
+  var wordList = loadJSON(LS.words, null) || DEF_WORDS.slice();
+  function wordsWithEmoji(){ return wordList.filter(function(x){return x.e;}); }
+  // Articolo per le frasi di f5 («tocca il gatto»). Euristica: vocale → l' ; finale in -a → la ; altrimenti il.
+  function artFor(w){
+    var c=w.charAt(0).toLowerCase();
+    if("aeiou".indexOf(c)>=0) return "l'"+w;
+    return (/a$/.test(w) ? "la " : "il ") + w;
+  }
+
+  // ---- album delle figurine (gamification) ----
+  var album = loadJSON(LS.album, {sounds:{}, words:{}, wprog:{}});
+  album.sounds=album.sounds||{}; album.words=album.words||{}; album.wprog=album.wprog||{};
+  function persistAlbum(){ saveJSON(LS.album, album); }
+  // Aggiunge/aggiorna una figurina. Ritorna true se è una novità (nuova o promossa).
+  function albumSet(sec, key, lvl){
+    var cur = album[sec][key]||0;
+    if(cur >= lvl) return false;
+    album[sec][key] = lvl; persistAlbum(); return true;
+  }
 
   // Metodo di uscita: su iOS (AirPlay disponibile, setSinkId no) l'audio passa da un
   // "ponte" Web Audio → MediaStream → <audio>, così il selettore AirPlay può dirottarlo.
@@ -632,19 +727,53 @@
   // Suona un buffer normalizzandolo. Ritorna la durata in ms.
   function playSound(buf){ ensureAudio(); if(!buf) return 0; playBuffer(buf, null, (buf.__g!=null?buf.__g:normGain(buf))); return buf.duration*1000; }
 
+  // ---- suoni "scoperta" di f0: salienti, simpatici, generati al volo (offline ok) ----
+  function makeBell(){
+    var key="bell"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.5), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    for(var h=0;h<2;h++){ var t0=Math.floor(h*0.55*sr), L=Math.floor(sr*0.7);
+      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){
+        d[idx]+= (Math.sin(2*Math.PI*1320*t)+0.55*Math.sin(2*Math.PI*2640*t)+0.22*Math.sin(2*Math.PI*3980*t))*Math.exp(-t*5.5);
+      } } }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+  function makeHorn(){
+    var key="horn"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.1), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    for(var h=0;h<2;h++){ var t0=Math.floor(h*0.55*sr), L=Math.floor(sr*0.38);
+      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i, env=Math.min(1,i/(sr*0.015))*Math.min(1,(L-i)/(sr*0.03)); if(idx<n){
+        d[idx]+= (Math.sin(2*Math.PI*440*t)+Math.sin(2*Math.PI*554*t)+0.4*Math.sin(2*Math.PI*880*t))*env;
+      } } }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+  function makeBirds(){
+    var key="birds"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.4), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    var starts=[0, .3, .65, 1.0];
+    starts.forEach(function(st){ var t0=Math.floor(st*sr), L=Math.floor(sr*0.16), ph=0;
+      for(var i=0;i<L;i++){ var t=i/L, idx=t0+i, f=2300+1100*Math.sin(Math.PI*t); ph+=2*Math.PI*f/sr;
+        if(idx<n) d[idx]+= Math.sin(ph)*Math.sin(Math.PI*t); } });
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+  function makeKnock(){
+    var key="knock"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.0), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    [0, .38].forEach(function(st){ var t0=Math.floor(st*sr), L=Math.floor(sr*0.3);
+      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){
+        d[idx]+= Math.sin(2*Math.PI*88*t)*Math.exp(-t*16) + (Math.random()*2-1)*0.35*Math.exp(-t*45);
+      } } });
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+
   // ============================== DEFINIZIONE FASI ==============================
-  // Suoni F0: salienti e lunghi. Suoni F1: brevi, più deboli, varie frequenze.
+  // Suoni F0: ognuno ha nome + emoji → al tocco giusto si RIVELA chi era (figurina).
   var F0_SOUNDS = [
-    {name:"tamburo",  fire:function(){ return playSound(makeDrum()); }},
-    {name:"fischio",  fire:function(){ return playSound(makeWhistle()); }},
-    {name:"tono basso",fire:function(){ return playSound(makeSine(300, 1.6)); }}
-  ];
-  var F1_SOUNDS = [
-    {name:"250 Hz",  fire:function(){ return playSound(makeSine(250, 0.7)); }},
-    {name:"500 Hz",  fire:function(){ return playSound(makeSine(500, 0.7)); }},
-    {name:"1 kHz",   fire:function(){ return playSound(makeSine(1000, 0.7)); }},
-    {name:"2 kHz",   fire:function(){ return playSound(makeSine(2000, 0.7)); }},
-    {name:"4 kHz",   fire:function(){ return playSound(makeSine(4000, 0.7)); }}
+    {key:"bell",   name:"campanello", emoji:"🔔", fire:function(){ return playSound(makeBell()); }},
+    {key:"horn",   name:"clacson",    emoji:"🚗", fire:function(){ return playSound(makeHorn()); }},
+    {key:"birds",  name:"uccellini",  emoji:"🐦", fire:function(){ return playSound(makeBirds()); }},
+    {key:"knock",  name:"toc toc",    emoji:"🚪", fire:function(){ return playSound(makeKnock()); }},
+    {key:"drum",   name:"tamburo",    emoji:"🥁", fire:function(){ return playSound(makeDrum()); }},
+    {key:"whistle",name:"fischio",    emoji:"🎶", fire:function(){ return playSound(makeWhistle()); }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -653,12 +782,12 @@
   ];
 
   var PHASES = [
-    { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono. Niente fretta: i suoni arrivano quando meno te lo aspetti.", trials:8,  sounds:F0_SOUNDS, catchRate:0,   ling:false },
-    { id:"f1", emoji:"🎵", label:"Lo senti?",      sub:"Suoni più brevi e leggeri. Tocca solo quando senti davvero qualcosa!", trials:10, sounds:F1_SOUNDS, catchRate:0.2, ling:true },
+    { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono: scoprirai chi l'ha fatto! I suoni arrivano quando meno te lo aspetti.", trials:8, sounds:F0_SOUNDS, catchRate:0 },
+    { id:"f1", emoji:"🎵", label:"Check di Ling",  sub:"I 6 suoni della voce (m·u·a·i·sc·s): tocca lo schermo appena senti la voce. Controlla che arrivino tutte le frequenze.", kind:"ling" },
     { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", sub:"Ascolti due suoni di fila: erano uguali o diversi? Tocca lo schermo per riascoltarli.", trials:10, kind:"discr" },
-    { id:"f3", emoji:"👉", label:"Indicalo!",          locked:true },
-    { id:"f4", emoji:"🗣️", label:"Ripeti!",            locked:true },
-    { id:"f5", emoji:"🧠", label:"Capiscilo!",          locked:true }
+    { id:"f3", emoji:"👉", label:"Indicalo!",  sub:"Guarda le carte, ascolta la parola e tocca la carta giusta. 3 volte giusta = la carta è tua!", trials:10, kind:"pick" },
+    { id:"f4", emoji:"✍️", label:"Scrivilo!",  sub:"Ascolta bene la parola (non si vede!) e scrivila. Tocca lo schermo per risentirla.", trials:8, kind:"write" },
+    { id:"f5", emoji:"🧠", label:"Capiscilo!", sub:"Ascolta cosa ti chiedo e tocca le carte giuste, nell'ordine giusto.", trials:8, kind:"orders" }
   ];
   function phaseById(id){ for(var i=0;i<PHASES.length;i++){ if(PHASES[i].id===id) return PHASES[i]; } return null; }
   function isUnlocked(p){ return !p.locked && !!progress.unlocked[p.id]; }
@@ -698,29 +827,37 @@
     curPhase=null;
     screenMap.style.display="flex";
     screenPhase.style.display="none";
+    $("screenAlbum").style.display="none";
     phaseControls.style.display="none";
     stage.classList.remove("touchable");
     setStatus("","Scegli una tappa del percorso","👆");
     renderMap();
   }
+  // Riporta la schermata esercizio a uno stato neutro (nasconde righe speciali).
+  function resetPhaseScreen(){
+    phTrial.textContent = "";
+    phEmo.style.display=""; phEmo.style.fontSize=""; showListen();
+    lingRow.style.display="none";
+    $("cardsRow").style.display="none";
+    $("typeRow").style.display="none";
+    $("palTabs").style.display="none";
+    $("palPrev").style.display="none"; $("palNext").style.display="none";
+    $("ansSame").style.display="none"; $("ansDiff").style.display="none";
+    $("spectrum").style.display="none";
+    $("phStart").style.display="flex"; $("phStart").disabled=false;
+  }
   function openPhase(p){
     curPhase=p;
     screenMap.style.display="none";
+    $("screenAlbum").style.display="none";
     screenPhase.style.display="flex";
     phaseControls.style.display="flex";
     phTitle.textContent = p.emoji+" "+p.label;
     phSub.textContent = p.sub||"";
-    phTrial.textContent = "";
-    phEmo.style.display=""; showListen();
-    lingRow.style.display="none";
-    $("ansSame").style.display="none"; $("ansDiff").style.display="none";
-    $("spectrum").style.display="none";
-    $("phStart").style.display="flex";
-    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
-    $("phLing").style.display = p.ling ? "flex" : "none";
+    resetPhaseScreen();
+    $("phStart").textContent="Inizia";
     stage.classList.remove("touchable");
-    phEmo.style.fontSize="";
-    try{ bandMode=false; msMode=false; }catch(e){}
+    try{ bandMode=false; }catch(e){}
     setStatus("","Premi «Inizia» quando sei pronto","👆");
   }
 
@@ -732,14 +869,13 @@
   var timers = [];
   function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
-  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; if(MS) MS.running=false; MS=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
+  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; I3=null; W4=null; C5=null; P=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
 
   function startSession(){
     ensureAudio();
     var p=curPhase; if(!p) return;
-    S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", soundName:"" };
+    S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", curSnd:null };
     $("phStart").disabled=true; $("phStart").textContent="In corso…";
-    $("phLing").style.display="none";
     stage.classList.add("touchable");
     showListen();
     setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
@@ -763,7 +899,7 @@
         return;
       }
       var snd = S.phase.sounds[Math.floor(Math.random()*S.phase.sounds.length)];
-      S.soundName = snd.name;
+      S.curSnd = snd;
       S.state="sounding"; document.body.setAttribute("data-trial","sounding");
       var dur = snd.fire() || 800;
       later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 1800);
@@ -779,7 +915,17 @@
   }
   function onStageTouch(){
     if(!S) return;
-    if(S.state==="sounding"){ S.hits++; feedback("🎉","Sentito! Bravo!","wait"); }
+    if(S.state==="sounding"){
+      S.hits++;
+      var snd=S.curSnd;
+      if(snd && snd.emoji){
+        // gamification: si RIVELA chi ha fatto il suono e si vince la figurina
+        var isNew = albumSet("sounds", snd.key, 1);
+        feedback(snd.emoji, "Era: "+snd.name+"! "+(isNew?"✨ Nuova figurina!":"Bravo!"), "wait");
+      } else {
+        feedback("🎉","Sentito! Bravo!","wait");
+      }
+    }
     else if(S.state==="waiting" || S.state==="catch"){
       S.fa++;
       if(S.state==="catch"){ feedback("🙈","Non c'era nessun suono… aspetta!",""); }
@@ -796,17 +942,31 @@
     if(st>prev) progress.stars[p.id]=st;
     // sblocco della tappa successiva con almeno 2 stelle
     if(p.id==="f0" && st>=2) progress.unlocked.f1=true;
-    if(p.id==="f1" && st>=2) progress.unlocked.f2=true;
     persistProgress();
     saveSession({ phase:p.id, trials:total, hits:S.hits, fa:S.fa, detail:"catch "+S.catchOk+"/"+S.catchN });
     showEmo(st>=2 ? "🏆" : "🏁");
     phTrial.textContent = "";
     setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    if(st>=2) confettiBurst(st>=3);
     stage.classList.remove("touchable");
     document.body.removeAttribute("data-trial");
     S=null;
     $("phStart").disabled=false; $("phStart").textContent="Ancora";
-    if(curPhase && curPhase.ling) $("phLing").style.display="flex";
+  }
+
+  // Festa di fine sessione: coriandoli sopra il palco (solo decorativi).
+  function confettiBurst(big){
+    var c=document.createElement("div"); c.className="confetti";
+    var EM=["🎉","⭐","✨","🎊"], n=big?18:10;
+    for(var i=0;i<n;i++){
+      var s=document.createElement("span");
+      s.textContent=EM[i%EM.length];
+      s.style.left=(4+Math.random()*90)+"%";
+      s.style.animationDelay=(Math.random()*0.5)+"s";
+      c.appendChild(s);
+    }
+    stage.appendChild(c);
+    setTimeout(function(){ c.remove(); }, 2600);
   }
 
   // ============================== MOTORE DISCRIMINAZIONE (f2: «Uguali o diversi?») ==============================
@@ -921,10 +1081,11 @@
     D.state="feedback";
     clearTimers(); stopCurrent();
     var correct = (saidSame === D.truthSame);
-    if(correct) D.ok++;
+    if(correct){ D.ok++; D.streak=(D.streak||0)+1; } else { D.streak=0; }
     f2ShowAnswers(false);
-    showEmo(correct ? "🎉" : "🙈");
-    setStatus(correct?"wait":"", correct ? "Esatto!" : ("Erano "+(D.truthSame?"uguali":"diversi")), correct?"🎉":"🙈");
+    var hot = correct && D.streak>=3;   // filotto: 3+ di fila
+    showEmo(hot ? "🔥" : correct ? "🎉" : "🙈");
+    setStatus(correct?"wait":"", hot ? (D.streak+" di fila! Grande!") : correct ? "Esatto!" : ("Erano "+(D.truthSame?"uguali":"diversi")), hot?"🔥":correct?"🎉":"🙈");
     later(f2Next, 1200);
   }
   function f2Finish(){
@@ -937,6 +1098,7 @@
     phTrial.textContent = "";
     f2ShowAnswers(false);
     setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    if(st>=2) confettiBurst(st>=3);
     stage.classList.remove("touchable");
     D=null;
     $("phStart").disabled=false; $("phStart").textContent="Ancora";
@@ -946,10 +1108,8 @@
   var L=null;
   function startLing(){
     ensureAudio();
-    if(!curPhase) return;
     L = { order: LING.slice().sort(function(){return Math.random()-0.5;}), i:0, res:{}, state:"idle" };
-    $("phStart").style.display="none";
-    $("phLing").disabled=true; $("phLing").textContent="In corso…";
+    $("phStart").disabled=true; $("phStart").textContent="In corso…";
     stage.classList.add("touchable");
     lingRow.style.display="none";
     showListen();
@@ -992,12 +1152,341 @@
       return '<span class="lingchip'+(ok?' ok':'')+'">'+(ok?'✓ ':'· ')+s.key+'</span>'; }).join("");
     lingRow.style.display="flex";
     phTrial.textContent="";
+    // f1 è una tappa vera: stelle in base ai suoni sentiti, ≥2⭐ sblocca f2
+    var st = starsFor(heard/6);
+    var prev = progress.stars.f1||0;
+    if(st>prev) progress.stars.f1=st;
+    if(st>=2) progress.unlocked.f2=true;
+    persistProgress();
     showEmo(heard===6 ? "🏆" : "🔎");
-    setStatus(heard===6?"wait":"", "Check di Ling: "+heard+" su 6 suoni sentiti", heard===6?"🏆":"🔎");
-    saveSession({ phase:"ling", trials:6, hits:heard, fa:0,
+    setStatus(heard===6?"wait":"", "Check di Ling: "+heard+" su 6 suoni sentiti  "+starsStr(st), heard===6?"🏆":"🔎");
+    if(st>=2) confettiBurst(heard===6);
+    saveSession({ phase:"f1", trials:6, hits:heard, fa:0,
       detail: LING.map(function(s){return s.key+"="+(res[s.key]||0);}).join(" ") });
-    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Allenamento";
-    $("phLing").disabled=false; $("phLing").textContent="Check di Ling"; $("phLing").style.display="flex";
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+  }
+
+  // ============================== f3 «INDICALO!» (identificazione con carte) ==============================
+  // Si vedono 2→4 carte con figure; si ascolta la parola e si tocca la carta giusta.
+  // 3 risposte giuste sulla stessa parola = la carta entra nell'album.
+  var I3=null;
+  var cardsRow=$("cardsRow");
+  function shuffled(arr){ return arr.slice().sort(function(){return Math.random()-0.5;}); }
+  function startF3(){
+    ensureAudio();
+    var p=curPhase; if(!p) return;
+    var bank=wordsWithEmoji();
+    if(bank.length<4){ setStatus("err","Servono almeno 4 parole con la figura (⚙ → Parole).","⚠️"); return; }
+    I3={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle" };
+    $("phStart").disabled=false; $("phStart").textContent="🔊 Risenti";
+    stage.classList.add("touchable");
+    f3Next();
+  }
+  function f3Next(){
+    if(!I3) return;
+    if(I3.n>=I3.total){ f3Finish(); return; }
+    I3.n++;
+    phTrial.textContent="Prova "+I3.n+" di "+I3.total;
+    phEmo.style.display="none";
+    var nCards = I3.n<=3 ? 2 : I3.n<=7 ? 3 : 4;
+    var pick = shuffled(wordsWithEmoji()).slice(0,nCards);
+    I3.target = pick[Math.floor(Math.random()*pick.length)];
+    cardsRow.innerHTML = pick.map(function(x){
+      return '<button class="cardbtn" data-w="'+x.w+'" aria-label="'+x.w+'">'+x.e+'</button>';
+    }).join("");
+    cardsRow.style.display="flex";
+    cardsRow.querySelectorAll(".cardbtn").forEach(function(b){
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); f3Tap(b); });
+    });
+    I3.state="answer";
+    setStatus("wait","Tocca la carta giusta (tocca fuori dalle carte per risentire)","👂");
+    speakDetect(I3.target.w, null);
+  }
+  function f3Replay(){ if(I3 && I3.state==="answer"){ speakDetect(I3.target.w, null); } }
+  function f3Tap(btn){
+    if(!I3 || I3.state!=="answer") return;
+    I3.state="feedback";
+    stopCurrent();
+    var w=btn.getAttribute("data-w"), correct=(w===I3.target.w);
+    cardsRow.querySelectorAll(".cardbtn").forEach(function(b){
+      if(b.getAttribute("data-w")===I3.target.w) b.classList.add("right");
+      else if(b===btn) b.classList.add("wrong");
+    });
+    var msg;
+    if(correct){
+      I3.ok++;
+      album.wprog[w]=(album.wprog[w]||0)+1; persistAlbum();
+      var won = album.wprog[w]>=3 && albumSet("words", w, 1);
+      msg = won ? ("✨ La carta di «"+w.toUpperCase()+"» è tua!") : ("Giusto! Era "+I3.target.e+" "+w);
+      if(won) confettiBurst(false);
+      setStatus("wait", msg, "🎉");
+    } else {
+      setStatus("", "Era "+I3.target.e+" «"+I3.target.w+"»", "🙈");
+    }
+    later(f3Next, 1500);
+  }
+  function f3Finish(){
+    var p=I3.phase, total=I3.total, good=I3.ok, st=starsFor(total?good/total:0);
+    var prev=progress.stars[p.id]||0; if(st>prev) progress.stars[p.id]=st;
+    if(st>=2) progress.unlocked.f4=true;
+    persistProgress();
+    saveSession({ phase:p.id, trials:total, hits:good, fa:total-good, detail:"identificazione "+good+"/"+total });
+    I3=null;
+    cardsRow.style.display="none";
+    phEmo.style.display=""; showEmo(st>=2?"🏆":"🏁");
+    phTrial.textContent="";
+    setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    if(st>=2) confettiBurst(st>=3);
+    stage.classList.remove("touchable");
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+  }
+
+  // ============================== f4 «SCRIVILO!» (ascolto aperto, autonomo) ==============================
+  // La parola NON si vede: si ascolta e si scrive. Il confronto è tollerante
+  // (maiuscole, accenti, 1 lettera di differenza nelle parole lunghe).
+  var W4=null;
+  var typeRow=$("typeRow"), typeInput=$("typeInput");
+  function normWord(s){ return String(s||"").toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+  function levDist(a,b){
+    if(Math.abs(a.length-b.length)>1) return 9;
+    var prev=[], cur=[];
+    for(var j=0;j<=b.length;j++) prev[j]=j;
+    for(var i=1;i<=a.length;i++){
+      cur=[i];
+      for(var k=1;k<=b.length;k++){
+        cur[k]=Math.min(prev[k]+1, cur[k-1]+1, prev[k-1]+(a[i-1]===b[k-1]?0:1));
+      }
+      prev=cur;
+    }
+    return prev[b.length];
+  }
+  function wordsMatch(a,b){
+    var na=normWord(a), nb=normWord(b);
+    if(na===nb) return true;
+    if(Math.min(na.length,nb.length)>=5) return levDist(na,nb)<=1;
+    return false;
+  }
+  function startF4(){
+    ensureAudio();
+    var p=curPhase; if(!p) return;
+    if(wordList.length<3){ setStatus("err","Servono almeno 3 parole (⚙ → Parole).","⚠️"); return; }
+    W4={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle" };
+    $("phStart").disabled=false; $("phStart").textContent="🔊 Risenti";
+    stage.classList.add("touchable");
+    w4Next();
+  }
+  function w4Next(){
+    if(!W4) return;
+    if(W4.n>=W4.total){ w4Finish(); return; }
+    W4.n++;
+    phTrial.textContent="Prova "+W4.n+" di "+W4.total;
+    phEmo.style.display=""; showListen();
+    var prevW = W4.target && W4.target.w;
+    var cand = wordList.filter(function(x){ return x.w!==prevW; });
+    W4.target = cand[Math.floor(Math.random()*cand.length)] || wordList[0];
+    typeInput.value="";
+    typeRow.style.display="flex";
+    W4.state="answer";
+    setStatus("wait","Ascolta e scrivi la parola (tocca lo schermo per risentire)","✍️");
+    speakDetect(W4.target.w, null);
+  }
+  function w4Replay(){ if(W4 && W4.state==="answer"){ speakDetect(W4.target.w, null); } }
+  function w4Submit(){
+    if(!W4 || W4.state!=="answer") return;
+    var typed=typeInput.value.trim();
+    if(!typed) return;
+    W4.state="feedback";
+    stopCurrent();
+    var t=W4.target, correct=wordsMatch(typed, t.w);
+    if(correct){
+      W4.ok++;
+      var lvl = (album.words[t.w]||0)>=1 ? 2 : 1;
+      var up = albumSet("words", t.w, lvl);
+      var gold = up && lvl===2;
+      showEmo(gold?"🌟":"🎉");
+      setStatus("wait", gold ? ("🌟 La carta di «"+t.w.toUpperCase()+"» è DORATA!") : ("Giusto! Era «"+t.w+"»"), gold?"🌟":"🎉");
+      if(gold) confettiBurst(false);
+    } else {
+      showEmo("🙈");
+      setStatus("", "Era «"+t.w+"» (hai scritto: "+typed+")", "🙈");
+    }
+    later(w4Next, 1700);
+  }
+  function w4Finish(){
+    var p=W4.phase, total=W4.total, good=W4.ok, st=starsFor(total?good/total:0);
+    var prev=progress.stars[p.id]||0; if(st>prev) progress.stars[p.id]=st;
+    if(st>=2) progress.unlocked.f5=true;
+    persistProgress();
+    saveSession({ phase:p.id, trials:total, hits:good, fa:total-good, detail:"scrittura "+good+"/"+total });
+    W4=null;
+    typeRow.style.display="none";
+    showEmo(st>=2?"🏆":"🏁");
+    phTrial.textContent="";
+    setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    if(st>=2) confettiBurst(st>=3);
+    stage.classList.remove("touchable");
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+  }
+
+  // ============================== f5 «CAPISCILO!» (ordini eseguibili, SENZA rumore) ==============================
+  // Frasi-ordine verificabili dall'app: «tocca il gatto», poi «… e poi il sole».
+  // La difficoltà sale con la lunghezza della frase (1 → 3 elementi), mai col rumore.
+  var C5=null;
+  function startF5(){
+    ensureAudio();
+    var p=curPhase; if(!p) return;
+    if(wordsWithEmoji().length<4){ setStatus("err","Servono almeno 4 parole con la figura (⚙ → Parole).","⚠️"); return; }
+    C5={ phase:p, n:0, ok:0, total:p.trials, seq:[], pos:0, state:"idle", sentence:"" };
+    $("phStart").disabled=false; $("phStart").textContent="🔊 Risenti";
+    stage.classList.add("touchable");
+    c5Next();
+  }
+  function c5Next(){
+    if(!C5) return;
+    if(C5.n>=C5.total){ c5Finish(); return; }
+    C5.n++;
+    phTrial.textContent="Prova "+C5.n+" di "+C5.total;
+    phEmo.style.display="none";
+    var k = C5.n<=3 ? 1 : C5.n<=6 ? 2 : 3;
+    var pick = shuffled(wordsWithEmoji()).slice(0,4);
+    C5.seq = shuffled(pick).slice(0,k);
+    C5.pos = 0;
+    C5.sentence = "Tocca " + C5.seq.map(function(x){ return artFor(x.w); }).join(", e poi ");
+    cardsRow.innerHTML = pick.map(function(x){
+      return '<button class="cardbtn" data-w="'+x.w+'" aria-label="'+x.w+'">'+x.e+'</button>';
+    }).join("");
+    cardsRow.style.display="flex";
+    cardsRow.querySelectorAll(".cardbtn").forEach(function(b){
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); c5Tap(b); });
+    });
+    C5.state="answer";
+    setStatus("wait","Ascolta e tocca le carte giuste, in ordine","👂");
+    speakDetect(C5.sentence, null);
+  }
+  function c5Replay(){ if(C5 && C5.state==="answer"){ speakDetect(C5.sentence, null); } }
+  function c5Tap(btn){
+    if(!C5 || C5.state!=="answer") return;
+    var w=btn.getAttribute("data-w");
+    if(w===C5.seq[C5.pos].w){
+      btn.classList.add("right"); btn.classList.add("done");
+      C5.pos++;
+      if(C5.pos>=C5.seq.length){
+        C5.state="feedback"; stopCurrent();
+        C5.ok++;
+        setStatus("wait","Perfetto! Missione compiuta!","🎉");
+        later(c5Next, 1300);
+      } else {
+        setStatus("wait","Giusto! Continua…","👍");
+      }
+    } else {
+      C5.state="feedback"; stopCurrent();
+      btn.classList.add("wrong");
+      cardsRow.querySelectorAll(".cardbtn").forEach(function(b){
+        if(b.getAttribute("data-w")===C5.seq[C5.pos].w) b.classList.add("right");
+      });
+      setStatus("", "La frase era: «"+C5.sentence+"»", "🙈");
+      later(c5Next, 1800);
+    }
+  }
+  function c5Finish(){
+    var p=C5.phase, total=C5.total, good=C5.ok, st=starsFor(total?good/total:0);
+    var prev=progress.stars[p.id]||0; if(st>prev) progress.stars[p.id]=st;
+    persistProgress();
+    saveSession({ phase:p.id, trials:total, hits:good, fa:total-good, detail:"comprensione "+good+"/"+total });
+    C5=null;
+    cardsRow.style.display="none";
+    phEmo.style.display=""; showEmo(st>=2?"🏆":"🏁");
+    phTrial.textContent="";
+    setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    if(st>=2) confettiBurst(st>=3);
+    stage.classList.remove("touchable");
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+  }
+
+  // ============================== PALESTRA (ascolto libero, senza punteggio) ==============================
+  // Il posto calmo: scorri lettere/parole e ascoltale quante volte vuoi.
+  // Qui il riscontro visivo è permesso (non è un esercizio di detezione).
+  var P=null;
+  function palItems(){ return P.mode==="phon" ? phonList : wordList; }
+  function openPalestra(){
+    abortSession(); curPhase=null; bandMode=false;
+    P={ mode:"phon", i:0 };
+    screenMap.style.display="none";
+    $("screenAlbum").style.display="none";
+    screenPhase.style.display="flex";
+    phaseControls.style.display="flex";
+    phTitle.textContent="🎧 Palestra";
+    phSub.textContent="Ascolto libero: scorri con ‹ › e tocca (o premi la barra) per ascoltare. Modifichi le liste in ⚙.";
+    resetPhaseScreen();
+    $("palTabs").style.display="flex";
+    $("palPrev").style.display="flex"; $("palNext").style.display="flex";
+    $("phStart").textContent="🔊 Ascolta";
+    stage.classList.add("touchable");
+    palRender();
+  }
+  function palSetMode(m){
+    if(!P) return;
+    P.mode=m; P.i=0;
+    $("palPhon").setAttribute("aria-pressed", m==="phon"?"true":"false");
+    $("palWord").setAttribute("aria-pressed", m==="word"?"true":"false");
+    palRender();
+  }
+  function palRender(){
+    if(!P) return;
+    var items=palItems();
+    if(!items.length){ phEmo.textContent="…"; phTrial.textContent=""; return; }
+    P.i=Math.max(0, Math.min(P.i, items.length-1));
+    var it=items[P.i];
+    var label = P.mode==="phon" ? it.label : it.w;
+    phEmo.style.display="";
+    phEmo.style.fontSize = label.length>3 ? "clamp(1.8rem,8vw,3rem)" : "";
+    phEmo.textContent = label + (P.mode==="word" && it.e ? " "+it.e : "");
+    phTrial.textContent = (P.i+1)+" di "+items.length;
+    $("palPrev").disabled = P.i===0;
+    $("palNext").disabled = P.i===items.length-1;
+    setStatus("","Tocca per ascoltare · ‹ › per scorrere","👆");
+  }
+  function palListen(){
+    if(!P) return;
+    var items=palItems(); if(!items.length) return;
+    ensureAudio();
+    var it=items[P.i];
+    var text = P.mode==="phon" ? it.say : it.w;
+    setStatus("play","Sto dicendo…","🔊");
+    speakDetect(text, function(){ setStatus("","Premi di nuovo per risentire · ‹ › per scorrere","✓"); });
+  }
+  function palStep(d){ if(!P) return; P.i+=d; palRender(); }
+
+  // ============================== ALBUM DELLE FIGURINE ==============================
+  function openAlbum(){
+    abortSession(); curPhase=null; bandMode=false;
+    screenMap.style.display="none";
+    screenPhase.style.display="none";
+    $("screenAlbum").style.display="flex";
+    phaseControls.style.display="flex";
+    $("phStart").style.display="none";
+    $("palPrev").style.display="none"; $("palNext").style.display="none";
+    $("ansSame").style.display="none"; $("ansDiff").style.display="none";
+    stage.classList.remove("touchable");
+    renderAlbum();
+    setStatus("","Le tue figurine: si vincono giocando alle tappe","📒");
+  }
+  function renderAlbum(){
+    var body=$("albumBody");
+    var sOwn=0, html="";
+    var sounds=F0_SOUNDS.map(function(s){
+      var own=(album.sounds[s.key]||0)>=1; if(own) sOwn++;
+      return '<div class="albitem'+(own?'':' off')+'"><span>'+(own?s.emoji:"❓")+'</span><small>'+(own?s.name:"???")+'</small></div>';
+    }).join("");
+    html += '<div class="albsec">🔊 Suoni scoperti · '+sOwn+'/'+F0_SOUNDS.length+'</div><div class="albgrid">'+sounds+'</div>';
+    var bank=wordsWithEmoji(), wOwn=0, wGold=0;
+    var words=bank.map(function(x){
+      var lvl=album.words[x.w]||0;
+      if(lvl>=1) wOwn++; if(lvl>=2) wGold++;
+      return '<div class="albitem'+(lvl>=2?' gold':lvl>=1?'':' off')+'"><span>'+(lvl>=1?x.e:"❓")+'</span><small>'+(lvl>=1?x.w:"???")+'</small></div>';
+    }).join("");
+    html += '<div class="albsec">🃏 Carte delle parole · '+wOwn+'/'+bank.length+(wGold?' · 🌟 dorate: '+wGold:'')+'</div><div class="albgrid">'+words+'</div>';
+    body.innerHTML=html;
   }
 
   // ============================== PROFILO DI ASCOLTO PER BANDA ==============================
@@ -1037,18 +1526,18 @@
     barTap(+bar.getAttribute("data-i"), bar);
   });
   function openBandTest(){
-    curPhase=null; msMode=false;
+    curPhase=null;
     screenMap.style.display="none";
+    $("screenAlbum").style.display="none";
     screenPhase.style.display="flex";
     phaseControls.style.display="flex";
     phTitle.textContent="🎚️ Profilo di ascolto per banda";
     phSub.innerHTML="2 suoni per ognuna delle 10 bande dello spettro. Tocca lo schermo appena senti un suono. <b>Tocca una barra</b> per riascoltare quel suono. Alla fine ottieni un profilo da mostrare al tecnico.";
-    phTrial.textContent="";
+    resetPhaseScreen();
     phEmo.style.display="none";
     lingRow.style.display="none";
     B=null; renderSpectrum();
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia il test";
-    $("phLing").style.display="none";
     stage.classList.remove("touchable");
     setStatus("","Premi «Inizia il test» (meglio se chi ascolta non guarda lo schermo)","👆");
   }
@@ -1112,64 +1601,6 @@
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Ripeti il test";
   }
 
-  // ============================== STEP 0 — «MI SENTI?» (osservazione, senza interazione) ==============================
-  // Dice parole salienti una dopo l'altra. L'utente NON deve rispondere: l'adulto osserva
-  // se c'è una qualsiasi reazione (si gira, sorride, vocalizza) e può annotarla.
-  var MS=null, msMode=false;
-  var MS_WORDS=["ciao","mamma","papà","guarda","bravo","pappa","nanna","acqua","palla","vieni","bello","dov'è","sì","no","Matteo"];
-  function openMiSenti(){
-    msMode=true; bandMode=false; curPhase=null;
-    screenMap.style.display="none"; screenPhase.style.display="flex"; phaseControls.style.display="flex";
-    phTitle.textContent="👋 Mi senti?";
-    phSub.innerHTML="Non è un gioco: avvia le parole e <b>guarda chi ascolta</b>. Si gira? Sorride? Fa un verso? Allora qualcosa arriva. Tieni lo schermo <b>fuori dalla sua vista</b>.";
-    phTrial.textContent="";
-    phEmo.style.display=""; phEmo.style.fontSize="clamp(2.2rem,9vw,3.6rem)"; phEmo.textContent="👋";
-    lingRow.style.display="none"; $("spectrum").style.display="none";
-    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
-    $("phLing").style.display="flex"; $("phLing").textContent="✋ Ha reagito"; $("phLing").disabled=true;
-    stage.classList.remove("touchable");
-    setStatus("","Premi «Inizia»: dirò parole una dopo l'altra. Osserva le reazioni.","👆");
-  }
-  function startMiSenti(){
-    ensureAudio();
-    MS={ said:0, react:0, max:12, running:true, order: MS_WORDS.slice().sort(function(){return Math.random()-0.5;}) };
-    $("phStart").textContent="Stop"; $("phLing").disabled=false;
-    stage.classList.add("touchable");
-    setStatus("wait","Sto dicendo delle parole… osserva le reazioni","🔊");
-    msNext();
-  }
-  function msNext(){
-    if(!MS || !MS.running) return;
-    if(MS.said >= MS.max){ finishMiSenti(false); return; }
-    var w = MS.order[MS.said % MS.order.length];
-    MS.said++;
-    phEmo.textContent = w;
-    phTrial.textContent = "Parola "+MS.said+" di "+MS.max;
-    var v = VALID_VOICES[Math.floor(Math.random()*VALID_VOICES.length)];   // voce a rotazione
-    speakDetect(w, function(){ later(msNext, 1900); }, v);
-  }
-  function msReact(){
-    if(!MS || !MS.running) return;
-    MS.react++;
-    setStatus("wait","👍 Reazione notata ("+MS.react+")","👍");
-  }
-  function finishMiSenti(){
-    if(!MS) return;
-    MS.running=false; clearTimers(); stopCurrent();
-    var said=MS.said, react=MS.react; MS=null;
-    stage.classList.remove("touchable");
-    phTrial.textContent="";
-    phEmo.style.fontSize=""; phEmo.textContent = react>0 ? "🙂" : "🔎";
-    if(react>0){
-      setStatus("wait","Dette "+said+" parole · reazioni notate: "+react+". Ottimo, qualcosa arriva!","🙂");
-    } else {
-      setStatus("err","Dette "+said+" parole · nessuna reazione notata. Riprova più vicino e più forte; se resta così, parlane col centro impianti.","🔎");
-    }
-    saveSession({ phase:"miSenti", trials:said, hits:react, fa:0, detail:"reazioni="+react });
-    $("phStart").disabled=false; $("phStart").textContent="Ancora";
-    $("phLing").disabled=true;
-  }
-
   // ============================== REGISTRO ==============================
   function currentOutName(){ return chosenSinkLabel || (outMethod==="bridge"?"sistema/AirPlay":"predefinita"); }
   function saveSession(s){
@@ -1180,7 +1611,9 @@
     if(sessions.length>500) sessions = sessions.slice(-500);
     persistSessions();
   }
-  var PHASE_NAMES = {f0:"C'è un suono!", f1:"Lo senti?", ling:"Check di Ling"};
+  var PHASE_NAMES = {f0:"C'è un suono!", f1:"Check di Ling", f2:"Uguali o diversi?", f3:"Indicalo!",
+                     f4:"Scrivilo!", f5:"Capiscilo!", banda:"Profilo per banda",
+                     ling:"Check di Ling", miSenti:"Mi senti?"};   // ultimi due: sessioni storiche
   function renderRegistro(){
     var list=$("regList");
     if(!sessions.length){ list.textContent="Nessuna sessione ancora."; }
@@ -1213,61 +1646,70 @@
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
   }
 
-  // ============================== ONBOARDING ==============================
-  function runOnboarding(){
-    var ob=$("obPanel"), title=$("obTitle"), opts=$("obOpts");
-    function step1(){
-      title.textContent="Chi si allena?";
-      opts.innerHTML="";
-      [{k:"bimbo",t:"🧒 Un bambino / una bambina",s:"Festeggiamenti e parole semplici"},
-       {k:"adulto",t:"🧑 Un adulto",s:"Stile sobrio, stesso percorso"}].forEach(function(o){
-        var b=document.createElement("button");
-        b.innerHTML=o.t+"<small>"+o.s+"</small>";
-        b.addEventListener("click", function(){ profile={type:o.k}; step2(); });
-        opts.appendChild(b);
-      });
-      ob.classList.add("show");
-    }
-    function step2(){
-      title.textContent="Da quanto è attivo l'impianto?";
-      opts.innerHTML="";
-      [{k:"nuovo",t:"🌱 Da poco (primi mesi)",s:"Si parte dall'inizio: accorgersi dei suoni"},
-       {k:"medio",t:"🌿 Da un po'",s:"Si parte dalla detezione fine"},
-       {k:"esperto",t:"🌳 Da tanto / non so",s:"Tutte le prime tappe aperte"}].forEach(function(o){
-        var b=document.createElement("button");
-        b.innerHTML=o.t+"<small>"+o.s+"</small>";
-        b.addEventListener("click", function(){
-          profile.stage=o.k;
-          saveJSON(LS.profile, profile);
-          if(o.k!=="nuovo") progress.unlocked.f1=true;
-          persistProgress();
-          ob.classList.remove("show");
-          showMap();
-        });
-        opts.appendChild(b);
-      });
-    }
-    step1();
+  // ============================== LISTE EDITABILI (Palestra e giochi) ==============================
+  function parsePhonText(txt){
+    return txt.split("\n").map(function(l){return l.trim();}).filter(Boolean).map(function(l){
+      var p=l.split("|"); var lab=p[0].trim();
+      return {label:lab, say:(p[1]||p[0]).trim()};
+    });
   }
+  function parseWordText(txt){
+    return txt.split("\n").map(function(l){return l.trim();}).filter(Boolean).map(function(l){
+      var p=l.split("|"); var w=p[0].trim().toLowerCase();
+      var e=(p[1]||"").trim();
+      return e ? {w:w, e:e} : {w:w};
+    });
+  }
+  function phonToText(){ return phonList.map(function(p){return p.label+" | "+p.say;}).join("\n"); }
+  function wordsToText(){ return wordList.map(function(x){return x.e ? (x.w+" | "+x.e) : x.w;}).join("\n"); }
 
   // ============================== EVENTI ==============================
-  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(D) f2Replay(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); });
+  stage.addEventListener("click", function(){
+    if(S) onStageTouch();
+    else if(D) f2Replay();
+    else if(I3) f3Replay();
+    else if(W4) w4Replay();
+    else if(C5) c5Replay();
+    else if(P) palListen();
+    else if(L) lingTouch();
+    else if(B) bandTouch();
+  });
   window.addEventListener("keydown", function(e){
     var typing=/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
     if(typing) return;
-    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(D) f2Replay(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); }
+    if(e.code==="Space"){ e.preventDefault();
+      if(S) onStageTouch(); else if(D) f2Replay(); else if(I3) f3Replay(); else if(W4) w4Replay();
+      else if(C5) c5Replay(); else if(P) palListen(); else if(L) lingTouch(); else if(B) bandTouch();
+    }
+    else if(e.key==="ArrowLeft" && P){ e.preventDefault(); palStep(-1); }
+    else if(e.key==="ArrowRight" && P){ e.preventDefault(); palStep(1); }
   });
   var bandMode=false;
-  $("backMap").addEventListener("click", function(){ abortSession(); L=null; B=null; MS=null; bandMode=false; msMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; showMap(); });
+  $("backMap").addEventListener("click", function(){ abortSession(); L=null; bandMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; showMap(); });
   $("phStart").addEventListener("click", function(){
-    if(msMode){ if(MS && MS.running) finishMiSenti(); else startMiSenti(); }
-    else if(bandMode) startBandTest();
-    else if(curPhase && curPhase.kind==="discr") startF2();
+    if(bandMode){ startBandTest(); return; }
+    if(P){ palListen(); return; }
+    if(I3){ f3Replay(); return; }
+    if(W4){ w4Replay(); return; }
+    if(C5){ c5Replay(); return; }
+    if(!curPhase) return;
+    if(curPhase.kind==="ling") startLing();
+    else if(curPhase.kind==="discr") startF2();
+    else if(curPhase.kind==="pick") startF3();
+    else if(curPhase.kind==="write") startF4();
+    else if(curPhase.kind==="orders") startF5();
     else startSession();
   });
-  $("phLing").addEventListener("click", function(){ if(msMode) msReact(); else startLing(); });
   $("ansSame").addEventListener("click", function(){ f2Answer(true); });
   $("ansDiff").addEventListener("click", function(){ f2Answer(false); });
+  $("palBtn").addEventListener("click", openPalestra);
+  $("albumBtn").addEventListener("click", openAlbum);
+  $("palPrev").addEventListener("click", function(){ palStep(-1); });
+  $("palNext").addEventListener("click", function(){ palStep(1); });
+  $("palPhon").addEventListener("click", function(){ palSetMode("phon"); });
+  $("palWord").addEventListener("click", function(){ palSetMode("word"); });
+  $("typeOk").addEventListener("click", w4Submit);
+  typeInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); w4Submit(); } });
   $("earL").addEventListener("click", function(){ ensureAudio(); applyEarSide("left"); });
   $("earB").addEventListener("click", function(){ ensureAudio(); applyEarSide("both"); });
   $("earR").addEventListener("click", function(){ ensureAudio(); applyEarSide("right"); });
@@ -1277,7 +1719,6 @@
     updateEarUI();
   })();
   $("bandBtn").addEventListener("click", function(){ bandMode=true; openBandTest(); });
-  $("msBtn").addEventListener("click", openMiSenti);
 
   // ============================== IMPOSTAZIONI ==============================
   var panel=$("panel");
@@ -1285,6 +1726,8 @@
     $("rate").value=rate; $("rateVal").textContent=rate.toFixed(2)+"×";
     $("vol").value=volume; $("volVal").textContent=Math.round(volume*100)+"%";
     $("voiceSel").value=currentVoice;
+    $("phonText").value=phonToText();
+    $("wordText").value=wordsToText();
     ensureAudio();
     setupSinkUI();
     updateOutputLabel();
@@ -1298,7 +1741,14 @@
   $("vol").addEventListener("input", function(e){ ensureAudio(); setVolume(parseFloat(e.target.value)); $("volVal").textContent=Math.round(volume*100)+"%"; persistSettings(); });
   $("voiceSel").addEventListener("change", function(e){ currentVoice=e.target.value; persistSettings(); engineText.textContent = cloudReady?("Voce: "+voiceShort(currentVoice)):"Voce del dispositivo"; });
   $("regCsv").addEventListener("click", exportCsv);
-  $("obRedo").addEventListener("click", function(){ panel.classList.remove("show"); runOnboarding(); });
+  $("phonText").addEventListener("change", function(e){
+    var np=parsePhonText(e.target.value);
+    if(np.length){ phonList=np; saveJSON(LS.phon, phonList); if(P && P.mode==="phon") palRender(); }
+  });
+  $("wordText").addEventListener("change", function(e){
+    var nw=parseWordText(e.target.value);
+    if(nw.length){ wordList=nw; saveJSON(LS.words, wordList); if(P && P.mode==="word") palRender(); }
+  });
 
   // librino
   var infoPanel=$("infoPanel");
@@ -1427,7 +1877,7 @@
   // L'AudioContext NON si crea qui ma al primo gesto (iOS).
   detectEngine();
   updateOutputLabel();
-  if(profile){ showMap(); } else { showMap(); runOnboarding(); }
+  showMap();
 
   // ---------- avviso installazione PWA (Android/iOS) ----------
   (function(){
