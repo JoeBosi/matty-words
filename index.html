@@ -221,7 +221,7 @@
       <div class="phase-title" id="phTitle"></div>
       <div class="phase-sub" id="phSub"></div>
       <div class="trialinfo" id="phTrial"></div>
-      <div class="bigemo" id="phEmo">👂</div>
+      <div class="bigemo" id="phEmo">🎧</div>
       <div class="lingrow" id="lingRow" style="display:none"></div>
     </div>
   </div>
@@ -583,7 +583,7 @@
 
   var PHASES = [
     { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono. Niente fretta: i suoni arrivano quando meno te lo aspetti.", trials:8,  sounds:F0_SOUNDS, catchRate:0,   ling:false },
-    { id:"f1", emoji:"👂", label:"Lo senti?",      sub:"Suoni più brevi e leggeri. Tocca solo quando senti davvero qualcosa!", trials:10, sounds:F1_SOUNDS, catchRate:0.2, ling:true },
+    { id:"f1", emoji:"🎵", label:"Lo senti?",      sub:"Suoni più brevi e leggeri. Tocca solo quando senti davvero qualcosa!", trials:10, sounds:F1_SOUNDS, catchRate:0.2, ling:true },
     { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", locked:true },
     { id:"f3", emoji:"👉", label:"Indicalo!",          locked:true },
     { id:"f4", emoji:"🗣️", label:"Ripeti!",            locked:true },
@@ -666,7 +666,7 @@
     $("phLing").style.display="none";
     stage.classList.add("touchable");
     showListen();
-    setStatus("wait","Tocca lo schermo appena senti un suono","👂");
+    setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
     nextTrial();
   }
   function nextTrial(){
@@ -675,7 +675,7 @@
     S.n++;
     phTrial.textContent = "Prova "+S.n+" di "+S.phase.trials;
     showListen();
-    setStatus("wait","Tocca lo schermo appena senti un suono","👂");
+    setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
     S.state="waiting"; document.body.setAttribute("data-trial","waiting");
     var delay = 2000 + Math.random()*4000;
     later(function(){
@@ -743,7 +743,7 @@
     stage.classList.add("touchable");
     lingRow.style.display="none";
     showListen();
-    setStatus("wait","Tocca appena senti una voce","👂");
+    setStatus("wait","Tocca appena senti una voce","🎧");
     lingNext();
   }
   function lingNext(){
@@ -752,7 +752,7 @@
     var item = L.order[L.i];
     phTrial.textContent = "Suono "+(L.i+1)+" di 6";
     showListen();
-    setStatus("wait","Tocca appena senti una voce","👂");
+    setStatus("wait","Tocca appena senti una voce","🎧");
     L.state="waiting";
     later(function(){
       if(!L || L.state!=="waiting") return;

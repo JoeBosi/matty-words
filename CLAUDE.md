@@ -17,7 +17,7 @@ Profilo iniziale al primo avvio: bimbo/adulto + da quanto è attivo l'impianto
 1. **f0 — 🔔 C'è un suono!** (consapevolezza) — suoni sintetici salienti (tamburo,
    fischio, tono basso, generati con Web Audio: funzionano offline). Tocca quando senti.
    8 prove. ATTIVA.
-2. **f1 — 👂 Lo senti?** (detezione fine) — toni brevi/deboli a 250–4000 Hz,
+2. **f1 — 🎵 Lo senti?** (detezione fine) — toni brevi/deboli a 250–4000 Hz,
    20% prove "trabocchetto" (silenzio: successo = non toccare). 10 prove.
    Include il **Check di Ling** (m·u·a·i·sc·s pronunciati dalla voce TTS; registra
    quali frequenze sono percepite). ATTIVA.
@@ -46,7 +46,7 @@ dispositivo/volume/uscita (avviso nel librino).
 Banner di stato SEMPRE visibile (icona+testo) — chi non sente deve capire lo stato.
 **Eccezione voluta (detezione)**: durante le prove di f0/f1/Ling lo stato NON dice
 "sto suonando" e niente barre animate — un indizio visivo svuoterebbe l'esercizio.
-Lo stato resta neutro («👂 tocca appena senti») e il riscontro arriva DOPO la risposta.
+Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO la risposta.
 
 ## Comandi
 - **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" durante le prove.
