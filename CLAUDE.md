@@ -65,6 +65,12 @@ Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO l
 - Audio: Web Audio (GainNode = volume ok su iOS; sblocco nel gesto; su iOS "ponte"
   MediaStream→`<audio>` per scegliere l'uscita con AirPlay). Selettore uscita nel
   badge in basso (Chrome: picker nativo; Edge: tendina; iOS: AirPlay).
+- **Scelta orecchio (L · L+R · R)**: toggle in basso che instrada il suono solo a
+  sinistra, solo a destra o entrambi, via `StereoPannerNode` (`panNode`) inserito tra
+  `masterGain` e l'uscita. «Entrambi» bypassa il panner (nessuna attenuazione); L/R
+  azzerano davvero il canale opposto (verificato: pan ±1 → RMS dell'altro canale = 0).
+  Utile per impianti mono/bilaterali e per allenare un orecchio per volta. Stato in
+  `earSide` (localStorage); nascosto se il browser non ha `createStereoPanner`.
 - **Normalizzazione (regola di tutta l'app)**: OGNI suono (toni, tamburo, fischio,
   parole TTS) è generato/decodificato come buffer, normalizzato allo stesso livello
   (`normGain`: RMS target 0.12 + tetto picco 0.97) e POI moltiplicato per il volume

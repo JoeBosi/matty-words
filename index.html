@@ -164,6 +164,12 @@
   .outbadge:active{transform:translateY(1px)}
   .outbadge .caret{opacity:.6;font-size:.62rem}
   .outsel{display:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter';font-size:.78rem;border-radius:9px;padding:.2rem .4rem;max-width:280px}
+  .earrow{display:flex;justify-content:center;align-items:center;gap:.4rem;margin-top:.3rem}
+  .earrow .earlab{font-size:.7rem;color:var(--muted)}
+  .earwrap{display:inline-flex;gap:.22rem;background:var(--idle-soft);border-radius:11px;padding:.16rem}
+  .earbtn{border:0;background:transparent;cursor:pointer;font-family:'Fredoka';font-weight:600;font-size:.74rem;color:var(--muted);padding:.24rem .6rem;border-radius:8px;line-height:1;min-width:32px}
+  .earbtn[aria-pressed="true"]{background:var(--wait);color:#fff}
+  .earbtn:active{transform:translateY(1px)}
 
   /* avviso installazione PWA (Android/iOS) */
   .installbar{
@@ -271,6 +277,14 @@
   <div class="engine outwrap">
     <button class="outbadge" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
     <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
+  </div>
+  <div class="earrow" id="earRow">
+    <span class="earlab">🎧 Orecchio:</span>
+    <div class="earwrap" role="group" aria-label="Scelta orecchio">
+      <button class="earbtn" id="earL" type="button" aria-pressed="false" title="Solo orecchio sinistro">L</button>
+      <button class="earbtn" id="earB" type="button" aria-pressed="true"  title="Tutti e due (normale)">L+R</button>
+      <button class="earbtn" id="earR" type="button" aria-pressed="false" title="Solo orecchio destro">R</button>
+    </div>
   </div>
 </main>
 
@@ -384,7 +398,8 @@
   var currentVoice = VALID_VOICES.indexOf(saved.voice)>=0 ? saved.voice : DEF_VOICE;
   var chosenSink = typeof saved.sink==="string" ? saved.sink : "";
   var chosenSinkLabel = typeof saved.sinkLabel==="string" ? saved.sinkLabel : "";
-  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
+  var earSide = (saved.earSide==="left"||saved.earSide==="right") ? saved.earSide : "both"; // left | right | both
+  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel, earSide:earSide}); }
 
   var profile  = loadJSON(LS.profile, null);            // {type:'bimbo'|'adulto', stage:'nuovo'|'medio'|'esperto'}
   var progress = loadJSON(LS.progress, {stars:{}, unlocked:{f0:true}});
@@ -423,7 +438,7 @@
 
   // ============================== MOTORE AUDIO (collaudato) ==============================
   var audioCtx=null, masterGain=null, currentSource=null, audioUnlocked=false;
-  var sinkEl=null, mediaDest=null;
+  var sinkEl=null, mediaDest=null, panNode=null;
 
   function ensureSinkEl(){
     if(!sinkEl){ sinkEl = new Audio(); sinkEl.setAttribute("playsinline",""); sinkEl.preload="auto"; }
@@ -432,17 +447,26 @@
   function routeMasterGain(){
     if(!masterGain || !audioCtx) return;
     try{ masterGain.disconnect(); }catch(e){}
+    if(panNode){ try{ panNode.disconnect(); }catch(e){} }
+    // Nodo di uscita: ponte (mediaDest, per scegliere l'uscita su iOS) o destinazione.
+    var sink = audioCtx.destination;
     if(outMethod==="bridge"){
       if(!mediaDest){ try{ mediaDest = audioCtx.createMediaStreamDestination(); }catch(e){ mediaDest=null; } }
       if(mediaDest){
-        masterGain.connect(mediaDest);
         var el=ensureSinkEl(); el.srcObject = mediaDest.stream; el.volume = 1;
         if(chosenSink && typeof el.setSinkId==="function"){ el.setSinkId(chosenSink).catch(function(){}); }
         el.play().catch(function(){});
-        return;
+        sink = mediaDest;
       }
     }
-    masterGain.connect(audioCtx.destination);
+    // Orecchio: per "solo sinistro/destro" passa dal panner (l'altro canale = silenzio);
+    // per "entrambi" collegamento diretto, così la modalità normale non perde volume.
+    if(panNode && earSide!=="both"){
+      panNode.pan.value = (earSide==="left" ? -1 : 1);
+      masterGain.connect(panNode); panNode.connect(sink);
+    } else {
+      masterGain.connect(sink);
+    }
   }
   // Va chiamata DENTRO un gesto utente: crea il contesto al primo tocco e lo sblocca
   // suonando un buffer muto (necessario su iOS).
@@ -453,6 +477,7 @@
       audioCtx = new AC();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
+      if(audioCtx.createStereoPanner){ panNode = audioCtx.createStereoPanner(); panNode.pan.value = (earSide==="left"?-1:earSide==="right"?1:0); }
       routeMasterGain();
       if(chosenSink && outMethod==="std" && typeof audioCtx.setSinkId==="function"){ audioCtx.setSinkId(chosenSink).catch(function(){}); }
     }
@@ -467,6 +492,18 @@
     }
   }
   function setVolume(v){ volume=v; if(masterGain) masterGain.gain.value = v; }
+  // Scelta orecchio: instrada il suono solo a sinistra, solo a destra o entrambi.
+  function updateEarUI(){
+    var m={left:"earL",both:"earB",right:"earR"};
+    ["earL","earB","earR"].forEach(function(id){ var b=$(id); if(b) b.setAttribute("aria-pressed", m[earSide]===id?"true":"false"); });
+  }
+  function applyEarSide(side){
+    earSide = side;
+    if(panNode) panNode.pan.value = (side==="left"?-1:side==="right"?1:0);
+    routeMasterGain();
+    updateEarUI();
+    persistSettings();
+  }
 
   function stopCurrent(){
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
@@ -1210,6 +1247,14 @@
   $("phLing").addEventListener("click", function(){ if(msMode) msReact(); else startLing(); });
   $("ansSame").addEventListener("click", function(){ f2Answer(true); });
   $("ansDiff").addEventListener("click", function(){ f2Answer(false); });
+  $("earL").addEventListener("click", function(){ ensureAudio(); applyEarSide("left"); });
+  $("earB").addEventListener("click", function(){ ensureAudio(); applyEarSide("both"); });
+  $("earR").addEventListener("click", function(){ ensureAudio(); applyEarSide("right"); });
+  (function(){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!(AC && AC.prototype && AC.prototype.createStereoPanner)){ var er=$("earRow"); if(er) er.style.display="none"; }
+    updateEarUI();
+  })();
   $("bandBtn").addEventListener("click", function(){ bandMode=true; openBandTest(); });
   $("msBtn").addEventListener("click", openMiSenti);
 
