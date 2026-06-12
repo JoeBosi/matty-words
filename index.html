@@ -111,7 +111,7 @@
 
   /* spettro: profilo di ascolto a 10 bande (mini-audiogramma) */
   .spectrum{display:flex;align-items:flex-end;gap:.3rem;width:100%;max-width:32rem;height:clamp(120px,26vh,180px)}
-  .specbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:.25rem;height:100%}
+  .specbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:.25rem;height:100%;cursor:pointer}
   .specbar .col{width:100%;flex:1;min-height:0;background:var(--idle-soft);border-radius:7px;display:flex;align-items:flex-end;overflow:hidden}
   .specbar .fill{width:100%;height:10%;background:var(--idle);border-radius:7px;transition:height .35s ease,background .35s}
   .specbar.s1 .fill{background:var(--play)}
@@ -831,17 +831,33 @@
       var sc = B ? B.scores[i] : 0;
       var h = sc>=2?100 : sc===1?55 : 10;
       var cls = "specbar" + (sc>=2?" s2":sc===1?" s1":"") + (B && (B.state!=="idle"&&B.state!=="done") && B.curBand===i ? " active":"");
-      return '<div class="'+cls+'"><div class="col"><div class="fill" style="height:'+h+'%"></div></div><div class="lab">'+bd.lab+'</div></div>';
+      return '<div class="'+cls+'" data-i="'+i+'" title="Tocca per riascoltare '+bd.lab+' Hz"><div class="col"><div class="fill" style="height:'+h+'%"></div></div><div class="lab">'+bd.lab+'</div></div>';
     }).join("");
     sp.style.display="flex";
   }
+  // Tocco su una barra: durante una prova in corso vale come "sentito"; altrimenti
+  // riproduce quel tono (per riascoltare/testare una banda) e fa lampeggiare la barra.
+  function barTap(i, bar){
+    if(B && (B.state==="waiting"||B.state==="sounding"||B.state==="catch")){ bandTouch(); return; }
+    ensureAudio();
+    stopCurrent();
+    synthTone(BANDS[i].f, 0.8, 0.4);
+    bar.classList.add("active");
+    setTimeout(function(){ bar.classList.remove("active"); }, 900);
+  }
+  $("spectrum").addEventListener("click", function(e){
+    var bar = e.target.closest ? e.target.closest(".specbar") : null;
+    if(!bar) return;
+    e.stopPropagation();
+    barTap(+bar.getAttribute("data-i"), bar);
+  });
   function openBandTest(){
     curPhase=null; msMode=false;
     screenMap.style.display="none";
     screenPhase.style.display="flex";
     phaseControls.style.display="flex";
     phTitle.textContent="🎚️ Profilo di ascolto per banda";
-    phSub.innerHTML="2 suoni per ognuna delle 10 bande dello spettro. Tocca lo schermo appena senti un suono. Alla fine ottieni un profilo da mostrare al tecnico.";
+    phSub.innerHTML="2 suoni per ognuna delle 10 bande dello spettro. Tocca lo schermo appena senti un suono. <b>Tocca una barra</b> per riascoltare quel suono. Alla fine ottieni un profilo da mostrare al tecnico.";
     phTrial.textContent="";
     phEmo.style.display="none";
     lingRow.style.display="none";
