@@ -88,7 +88,7 @@
   .node .emo{font-size:7px}
   .node .lab{font-size:3.4px;font-weight:600}
   .node .st{font-size:3.4px}
-  .map path.trail{fill:none;stroke:var(--line);stroke-width:1.6;stroke-dasharray:3 2.4;stroke-linecap:round}
+  .map .trail{fill:none;stroke:var(--line);stroke-width:1.6;stroke-dasharray:3 2.4;stroke-linecap:round;stroke-linejoin:round}
 
   /* schermata esercizio */
   .bigemo{font-size:clamp(3.4rem,16vw,6.5rem);line-height:1;display:flex;align-items:center;justify-content:center;min-height:clamp(4rem,18vw,7.5rem)}
@@ -101,6 +101,25 @@
   .lingrow{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
   .lingchip{font-family:'Fredoka';font-weight:600;font-size:1rem;padding:.45rem .8rem;border-radius:12px;background:var(--idle-soft);color:var(--muted)}
   .lingchip.ok{background:var(--wait-soft);color:var(--wait)}
+
+  /* bottone strumento (profilo per banda) */
+  .toolbtn{margin:.4rem auto 0;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+    border-radius:13px;padding:.55rem .9rem;font-family:'Fredoka';font-weight:600;font-size:.92rem;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;line-height:1.25}
+  .toolbtn small{font-family:'Inter';font-weight:400;color:var(--muted);font-size:.72rem}
+  .toolbtn:active{transform:translateY(1px)}
+
+  /* spettro: profilo di ascolto a 10 bande (mini-audiogramma) */
+  .spectrum{display:flex;align-items:flex-end;gap:.3rem;width:100%;max-width:32rem;height:clamp(120px,26vh,180px)}
+  .specbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:.25rem;height:100%}
+  .specbar .col{width:100%;flex:1;min-height:0;background:var(--idle-soft);border-radius:7px;display:flex;align-items:flex-end;overflow:hidden}
+  .specbar .fill{width:100%;height:10%;background:var(--idle);border-radius:7px;transition:height .35s ease,background .35s}
+  .specbar.s1 .fill{background:var(--play)}
+  .specbar.s2 .fill{background:var(--wait)}
+  .specbar.active .col{outline:2.5px solid var(--wait);outline-offset:1px;animation:specpulse 1s ease-in-out infinite}
+  .specbar .lab{font-size:.58rem;color:var(--muted);font-weight:600;white-space:nowrap}
+  @keyframes specpulse{0%,100%{outline-color:var(--wait)}50%{outline-color:transparent}}
+  @media (prefers-reduced-motion:reduce){.specbar.active .col{animation:none}}
 
   /* indicatore animato (usato SOLO fuori dagli esercizi di detezione) */
   .bars{display:flex;align-items:flex-end;gap:6px;height:40px}
@@ -213,16 +232,19 @@
     <!-- SCHERMATA MAPPA -->
     <div class="mapwrap" id="screenMap">
       <div class="map-title">Il tuo percorso di ascolto</div>
+      <button class="toolbtn" id="msBtn">👋 Step 0 · Mi senti? <small>il primissimo test · osserva le reazioni</small></button>
       <svg class="map" id="mapSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+      <button class="toolbtn" id="bandBtn">🎚️ Profilo di ascolto per banda <small>per il tecnico / audiologo</small></button>
     </div>
 
     <!-- SCHERMATA ESERCIZIO -->
-    <div id="screenPhase" style="display:none;flex-direction:column;align-items:center;gap:.8rem;width:100%">
+    <div id="screenPhase" style="display:none;flex-direction:column;align-items:center;gap:.7rem;width:100%">
       <div class="phase-title" id="phTitle"></div>
       <div class="phase-sub" id="phSub"></div>
       <div class="trialinfo" id="phTrial"></div>
       <div class="bigemo" id="phEmo">🎧</div>
       <div class="lingrow" id="lingRow" style="display:none"></div>
+      <div class="spectrum" id="spectrum" style="display:none"></div>
     </div>
   </div>
 
@@ -498,10 +520,10 @@
     setTimeout(function(){ try{ speechSynthesis.resume(); }catch(e){} }, 60);
   }
   // Pronuncia `text` e chiama after() alla fine (cloud → ripiego browser).
-  async function speakDetect(text, after){
+  async function speakDetect(text, after, voiceId){
     ensureAudio();
     if(cloudReady && audioCtx){
-      try{ var clip = await getBuffer(text, currentVoice, rate); playBuffer(clip.buffer, after, clip.gain); return; }
+      try{ var clip = await getBuffer(text, voiceId||currentVoice, rate); playBuffer(clip.buffer, after, clip.gain); return; }
       catch(e){}
     }
     speakBrowser(text, after);
@@ -640,11 +662,14 @@
     phTitle.textContent = p.emoji+" "+p.label;
     phSub.textContent = p.sub||"";
     phTrial.textContent = "";
-    showListen();
+    phEmo.style.display=""; showListen();
     lingRow.style.display="none";
+    $("spectrum").style.display="none";
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
     $("phLing").style.display = p.ling ? "flex" : "none";
     stage.classList.remove("touchable");
+    phEmo.style.fontSize="";
+    try{ bandMode=false; msMode=false; }catch(e){}
     setStatus("","Premi «Inizia» quando sei pronto","👆");
   }
 
@@ -656,7 +681,7 @@
   var timers = [];
   function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
-  function abortSession(){ clearTimers(); stopCurrent(); S=null; document.body.removeAttribute("data-trial"); }
+  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; if(MS) MS.running=false; MS=null; document.body.removeAttribute("data-trial"); }
 
   function startSession(){
     ensureAudio();
@@ -790,6 +815,160 @@
     $("phLing").disabled=false; $("phLing").textContent="Check di Ling"; $("phLing").style.display="flex";
   }
 
+  // ============================== PROFILO DI ASCOLTO PER BANDA ==============================
+  // Lo spettro del Nucleus (~188–7938 Hz) diviso in 10 bande log. Per ogni banda 2 toni:
+  // si registra quanti sono stati percepiti (0/1/2). Prove "trabocchetto" (silenzio) per
+  // smascherare chi tocca a vuoto. Esito = mini-audiogramma da mostrare all'audiologo.
+  var BANDS = [
+    {f:250,lab:"250"},  {f:400,lab:"400"},  {f:600,lab:"600"},  {f:900,lab:"900"},
+    {f:1300,lab:"1.3k"},{f:1900,lab:"1.9k"},{f:2700,lab:"2.7k"},{f:3800,lab:"3.8k"},
+    {f:5200,lab:"5.2k"},{f:7000,lab:"7k"}
+  ];
+  var B=null;
+  function renderSpectrum(){
+    var sp=$("spectrum");
+    sp.innerHTML = BANDS.map(function(bd,i){
+      var sc = B ? B.scores[i] : 0;
+      var h = sc>=2?100 : sc===1?55 : 10;
+      var cls = "specbar" + (sc>=2?" s2":sc===1?" s1":"") + (B && (B.state!=="idle"&&B.state!=="done") && B.curBand===i ? " active":"");
+      return '<div class="'+cls+'"><div class="col"><div class="fill" style="height:'+h+'%"></div></div><div class="lab">'+bd.lab+'</div></div>';
+    }).join("");
+    sp.style.display="flex";
+  }
+  function openBandTest(){
+    curPhase=null; msMode=false;
+    screenMap.style.display="none";
+    screenPhase.style.display="flex";
+    phaseControls.style.display="flex";
+    phTitle.textContent="🎚️ Profilo di ascolto per banda";
+    phSub.innerHTML="2 suoni per ognuna delle 10 bande dello spettro. Tocca lo schermo appena senti un suono. Alla fine ottieni un profilo da mostrare al tecnico.";
+    phTrial.textContent="";
+    phEmo.style.display="none";
+    lingRow.style.display="none";
+    B=null; renderSpectrum();
+    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia il test";
+    $("phLing").style.display="none";
+    stage.classList.remove("touchable");
+    setStatus("","Premi «Inizia il test» (meglio se chi ascolta non guarda lo schermo)","👆");
+  }
+  function startBandTest(){
+    ensureAudio();
+    var trials=[];
+    for(var i=0;i<BANDS.length;i++){ trials.push({b:i,sound:true}); trials.push({b:i,sound:true}); }
+    for(var c=0;c<4;c++){ var pos=Math.floor(Math.random()*(trials.length+1)); trials.splice(pos,0,{b:Math.floor(Math.random()*BANDS.length),sound:false}); }
+    B={ trials:trials, idx:0, scores:new Array(BANDS.length).fill(0), fa:0, state:"waiting", curBand:0 };
+    $("phStart").disabled=true; $("phStart").textContent="In corso…";
+    stage.classList.add("touchable");
+    renderSpectrum();
+    bandNext();
+  }
+  function bandNext(){
+    if(!B) return;
+    if(B.idx>=B.trials.length){ finishBandTest(); return; }
+    var tr=B.trials[B.idx];
+    B.curBand=tr.b; B.curSound=tr.sound;
+    phTrial.textContent="Prova "+(B.idx+1)+" di "+B.trials.length;
+    setStatus("wait","Tocca lo schermo appena senti il suono","🎧");
+    B.state="waiting"; renderSpectrum();
+    later(function(){
+      if(!B || B.state!=="waiting") return;
+      if(tr.sound){
+        B.state="sounding"; renderSpectrum();
+        synthTone(BANDS[tr.b].f, 0.7, 0.4);
+        later(function(){ if(B && B.state==="sounding"){ B.idx++; bandFeedback("💤"); } }, 700+1500);
+      } else {
+        B.state="catch"; renderSpectrum();
+        later(function(){ if(B && B.state==="catch"){ B.idx++; bandFeedback("🤫"); } }, 2200);
+      }
+    }, 1000 + Math.random()*1800);
+  }
+  function bandFeedback(emo){
+    if(!B) return;
+    B.state="feedback"; clearTimers(); stopCurrent();
+    renderSpectrum();
+    later(bandNext, 650);
+  }
+  function bandTouch(){
+    if(!B) return;
+    if(B.state==="sounding"){ B.scores[B.curBand]=Math.min(2, B.scores[B.curBand]+1); B.idx++; bandFeedback("✓"); }
+    else if(B.state==="catch"){ B.fa++; B.idx++; bandFeedback("🙈"); }
+    /* waiting: tocco anticipato → ignorato */
+  }
+  function finishBandTest(){
+    var scores=B.scores.slice(), fa=B.fa;
+    B.state="done"; renderSpectrum();
+    var heard=scores.reduce(function(a,b){return a+b;},0);
+    B=null;
+    stage.classList.remove("touchable");
+    clearTimers();
+    phTrial.textContent="";
+    var lowOk=scores.slice(0,5).reduce(function(a,b){return a+b;},0);
+    var highOk=scores.slice(5).reduce(function(a,b){return a+b;},0);
+    var hint = highOk< lowOk-3 ? "Sembrano più deboli gli ACUTI (destra)." : lowOk< highOk-3 ? "Sembrano più deboli i GRAVI (sinistra)." : "";
+    setStatus(fa>2?"err":"", "Profilo pronto: "+heard+"/20 suoni. "+(fa>2?("⚠️ "+fa+" tocchi a vuoto: ripeti con più calma."):hint), fa>2?"⚠️":"📊");
+    saveSession({ phase:"banda", trials:20, hits:heard, fa:fa,
+      detail: BANDS.map(function(bd,i){ return bd.lab+":"+scores[i]; }).join(" ") });
+    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Ripeti il test";
+  }
+
+  // ============================== STEP 0 — «MI SENTI?» (osservazione, senza interazione) ==============================
+  // Dice parole salienti una dopo l'altra. L'utente NON deve rispondere: l'adulto osserva
+  // se c'è una qualsiasi reazione (si gira, sorride, vocalizza) e può annotarla.
+  var MS=null, msMode=false;
+  var MS_WORDS=["ciao","mamma","papà","guarda","bravo","pappa","nanna","acqua","palla","vieni","bello","dov'è","sì","no","Matteo"];
+  function openMiSenti(){
+    msMode=true; bandMode=false; curPhase=null;
+    screenMap.style.display="none"; screenPhase.style.display="flex"; phaseControls.style.display="flex";
+    phTitle.textContent="👋 Mi senti?";
+    phSub.innerHTML="Non è un gioco: avvia le parole e <b>guarda chi ascolta</b>. Si gira? Sorride? Fa un verso? Allora qualcosa arriva. Tieni lo schermo <b>fuori dalla sua vista</b>.";
+    phTrial.textContent="";
+    phEmo.style.display=""; phEmo.style.fontSize="clamp(2.2rem,9vw,3.6rem)"; phEmo.textContent="👋";
+    lingRow.style.display="none"; $("spectrum").style.display="none";
+    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
+    $("phLing").style.display="flex"; $("phLing").textContent="✋ Ha reagito"; $("phLing").disabled=true;
+    stage.classList.remove("touchable");
+    setStatus("","Premi «Inizia»: dirò parole una dopo l'altra. Osserva le reazioni.","👆");
+  }
+  function startMiSenti(){
+    ensureAudio();
+    MS={ said:0, react:0, max:12, running:true, order: MS_WORDS.slice().sort(function(){return Math.random()-0.5;}) };
+    $("phStart").textContent="Stop"; $("phLing").disabled=false;
+    stage.classList.add("touchable");
+    setStatus("wait","Sto dicendo delle parole… osserva le reazioni","🔊");
+    msNext();
+  }
+  function msNext(){
+    if(!MS || !MS.running) return;
+    if(MS.said >= MS.max){ finishMiSenti(false); return; }
+    var w = MS.order[MS.said % MS.order.length];
+    MS.said++;
+    phEmo.textContent = w;
+    phTrial.textContent = "Parola "+MS.said+" di "+MS.max;
+    var v = VALID_VOICES[Math.floor(Math.random()*VALID_VOICES.length)];   // voce a rotazione
+    speakDetect(w, function(){ later(msNext, 1900); }, v);
+  }
+  function msReact(){
+    if(!MS || !MS.running) return;
+    MS.react++;
+    setStatus("wait","👍 Reazione notata ("+MS.react+")","👍");
+  }
+  function finishMiSenti(){
+    if(!MS) return;
+    MS.running=false; clearTimers(); stopCurrent();
+    var said=MS.said, react=MS.react; MS=null;
+    stage.classList.remove("touchable");
+    phTrial.textContent="";
+    phEmo.style.fontSize=""; phEmo.textContent = react>0 ? "🙂" : "🔎";
+    if(react>0){
+      setStatus("wait","Dette "+said+" parole · reazioni notate: "+react+". Ottimo, qualcosa arriva!","🙂");
+    } else {
+      setStatus("err","Dette "+said+" parole · nessuna reazione notata. Riprova più vicino e più forte; se resta così, parlane col centro impianti.","🔎");
+    }
+    saveSession({ phase:"miSenti", trials:said, hits:react, fa:0, detail:"reazioni="+react });
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+    $("phLing").disabled=true;
+  }
+
   // ============================== REGISTRO ==============================
   function currentOutName(){ return chosenSinkLabel || (outMethod==="bridge"?"sistema/AirPlay":"predefinita"); }
   function saveSession(s){
@@ -871,15 +1050,22 @@
   }
 
   // ============================== EVENTI ==============================
-  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(L) lingTouch(); });
+  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); });
   window.addEventListener("keydown", function(e){
     var typing=/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
     if(typing) return;
-    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(L) lingTouch(); }
+    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); }
   });
-  $("backMap").addEventListener("click", function(){ abortSession(); L=null; showMap(); });
-  $("phStart").addEventListener("click", startSession);
-  $("phLing").addEventListener("click", startLing);
+  var bandMode=false;
+  $("backMap").addEventListener("click", function(){ abortSession(); L=null; B=null; MS=null; bandMode=false; msMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; showMap(); });
+  $("phStart").addEventListener("click", function(){
+    if(msMode){ if(MS && MS.running) finishMiSenti(); else startMiSenti(); }
+    else if(bandMode) startBandTest();
+    else startSession();
+  });
+  $("phLing").addEventListener("click", function(){ if(msMode) msReact(); else startLing(); });
+  $("bandBtn").addEventListener("click", function(){ bandMode=true; openBandTest(); });
+  $("msBtn").addEventListener("click", openMiSenti);
 
   // ============================== IMPOSTAZIONI ==============================
   var panel=$("panel");
