@@ -438,7 +438,7 @@
 
   // ============================== MOTORE AUDIO (collaudato) ==============================
   var audioCtx=null, masterGain=null, currentSource=null, audioUnlocked=false;
-  var sinkEl=null, mediaDest=null, panNode=null;
+  var sinkEl=null, mediaDest=null, panNode=null, playGuard=null;
 
   function ensureSinkEl(){
     if(!sinkEl){ sinkEl = new Audio(); sinkEl.setAttribute("playsinline",""); sinkEl.preload="auto"; }
@@ -506,6 +506,7 @@
   }
 
   function stopCurrent(){
+    if(playGuard){ clearTimeout(playGuard); playGuard=null; }
     if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
     if('speechSynthesis' in window) speechSynthesis.cancel();
   }
@@ -518,9 +519,16 @@
       var g = audioCtx.createGain(); g.gain.value = clipGain;
       src.connect(g); g.connect(masterGain);
     } else { src.connect(masterGain); }
-    src.onended = function(){ if(currentSource===src) currentSource=null; if(after) after(); };
+    src.onended = function(){ if(playGuard){ clearTimeout(playGuard); playGuard=null; } if(currentSource===src) currentSource=null; if(after) after(); };
     currentSource = src;
     src.start(0);
+    // Backstop: nessun clip può "restare bloccato". Lo fermiamo comunque dopo la sua
+    // durata (+margine), con tetto massimo di 12s, anche se onended non scattasse.
+    var capMs = Math.min(audioBuf.duration || 0, 12) * 1000 + 250;
+    playGuard = setTimeout(function(){
+      if(currentSource===src){ try{ src.onended=null; src.stop(); }catch(e){} currentSource=null; if(after) after(); }
+      playGuard=null;
+    }, capMs);
   }
 
   // ---- normalizzazione: tutti i suoni allo stesso livello prima del volume app ----
@@ -545,7 +553,13 @@
       body: JSON.stringify({text:text, voice:voiceId, rate:r}) });
     if(!res.ok) throw new Error("tts http "+res.status);
     var arr = await res.arrayBuffer();
-    var audioBuf = await audioCtx.decodeAudioData(arr);
+    if(!arr || arr.byteLength < 800) throw new Error("tts audio troppo piccolo"); // header-only/vuoto
+    var audioBuf;
+    try{ audioBuf = await audioCtx.decodeAudioData(arr); }
+    catch(e){ throw new Error("tts audio non decodificabile"); }
+    // Scarta audio implausibile (corrotto): durata nulla o assurdamente lunga → niente rumore,
+    // si ripiega sulla voce del dispositivo (lo fa speakDetect catturando l'errore).
+    if(!audioBuf || !(audioBuf.duration > 0.05) || audioBuf.duration > 12) throw new Error("tts audio implausibile");
     var clip = { buffer:audioBuf, gain:normGain(audioBuf) };   // parole normalizzate come gli altri suoni
     cache.set(k, clip);
     return clip;
@@ -838,7 +852,14 @@
   var F2_WORDS = ["pane","cane","palla","balla","riso","viso","sale","sole","topo","capo"];
   function f2Prewarm(){
     if(!cloudReady || !audioCtx) return;
-    F2_WORDS.forEach(function(w){ getBuffer(w, currentVoice, rate).catch(function(){}); });
+    // In FILA (non in parallelo): 10 richieste insieme sovraccaricano msedge-tts e
+    // generano audio corrotto. Una alla volta, con una piccola pausa.
+    var i=0;
+    (function next(){
+      if(i>=F2_WORDS.length) return;
+      var w=F2_WORDS[i++];
+      getBuffer(w, currentVoice, rate).catch(function(){}).then(function(){ setTimeout(next, 120); });
+    })();
   }
   function startF2(){
     ensureAudio();
