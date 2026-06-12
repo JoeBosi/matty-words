@@ -1,96 +1,88 @@
-# Matty Words — allenamento all'ascolto per portatori di impianto cocleare
+# Matty Words — percorso di allenamento uditivo per portatori di impianto cocleare
 
-Nome pubblico dell'app: **Matty Words**. Sottotitolo/descrizione: "allenamento all'ascolto".
+Nome pubblico dell'app: **Matty Words**. Sottotitolo: "allenamento all'ascolto".
 
-Web app di pratica/allenamento uditivo, pensata anche per bambini piccoli che non
-sanno ancora descrivere cosa sentono. **Non è un dispositivo medico**: è un supporto
-da affiancare al lavoro di logopedista/audiologo; gli esercizi andrebbero validati da loro.
+Web app per imparare, gradino dopo gradino, a interpretare le informazioni che
+arrivano al cervello dall'impianto cocleare. Pensata per **tutti** (bambini e adulti),
+incluso chi è stato **attivato da poco** e sente ancora poco/nulla.
+**Non è un dispositivo medico**: è un supporto da affiancare al lavoro di
+logopedista/audiologo; percorso e risultati andrebbero condivisi con loro.
+
+## Architettura: PERCORSO a tappe (scala di Erber)
+
+L'app è una **mappa di gioco** (una sola schermata, niente scroll) con 6 tappe.
+Profilo iniziale al primo avvio: bimbo/adulto + da quanto è attivo l'impianto
+(decide la tappa di partenza). Tutto salvato in localStorage.
+
+1. **f0 — 🔔 C'è un suono!** (consapevolezza) — suoni sintetici salienti (tamburo,
+   fischio, tono basso, generati con Web Audio: funzionano offline). Tocca quando senti.
+   8 prove. ATTIVA.
+2. **f1 — 👂 Lo senti?** (detezione fine) — toni brevi/deboli a 250–4000 Hz,
+   20% prove "trabocchetto" (silenzio: successo = non toccare). 10 prove.
+   Include il **Check di Ling** (m·u·a·i·sc·s pronunciati dalla voce TTS; registra
+   quali frequenze sono percepite). ATTIVA.
+3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — coppie minime e soprasegmentali. IN ARRIVO.
+4. **f3 — 👉 Indicalo!** (identificazione) — 2–4 carte con figure (emoji), tocca quella giusta. IN ARRIVO.
+5. **f4 — 🗣️ Ripeti!** (produzione) — normale (parola a schermo) e difficile (solo audio,
+   open-set); il microfono trascrive ma **l'adulto è il giudice** (✓/✗). IN ARRIVO.
+6. **f5 — 🧠 Capiscilo!** (comprensione) — ordini eseguibili, ascolto nel rumore. IN ARRIVO.
+
+Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); f0 con ≥2⭐ sblocca f1.
+Mascotte: il logo Matty (SVG) che "respira" durante l'attesa; emoji per i feedback
+(🎉 sentito · 🙈 falso allarme · 💤 mancato · 🤫 trabocchetto superato · 🏆 traguardo).
+
+## Registro e "termometro" (etica)
+
+Ogni sessione salva: data, fase, prove, riuscite, falsi allarmi, dettaglio
+(es. Ling per suono), **uscita audio usata** e voce. Visibile in ⚙ → Registro,
+**export CSV** per la logopedista. Se le ultime 3 sessioni di detezione hanno 0
+riuscite → nota CALMA che suggerisce di mostrare i dati al centro impianti.
+L'app **non diagnostica mai** ("l'impianto non funziona" è vietato): suggerisce solo
+di parlarne coi professionisti. I dati sono confrontabili solo a parità di
+dispositivo/volume/uscita (avviso nel librino).
+
+## Regola di design fondamentale (aggiornata)
+
+Banner di stato SEMPRE visibile (icona+testo) — chi non sente deve capire lo stato.
+**Eccezione voluta (detezione)**: durante le prove di f0/f1/Ling lo stato NON dice
+"sto suonando" e niente barre animate — un indizio visivo svuoterebbe l'esercizio.
+Lo stato resta neutro («👂 tocca appena senti») e il riscontro arriva DOPO la risposta.
+
+## Comandi
+- **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" durante le prove.
+- Pulsanti: ‹ Mappa · Inizia/Ancora · Check di Ling (solo f1).
 
 ## Stack
-- Progetto statico + serverless per **Vercel**:
-  - `index.html` — tutta l'app (HTML + CSS + JavaScript vanilla, nessun build).
-  - `api/tts.js` — funzione serverless: testo+voce+velocità → audio MP3 dalle voci
-    neurali **Microsoft** (qualità Azure) tramite il motore gratuito di Edge.
-    **NESSUNA chiave**, nessuna fatturazione.
-  - `lib/tts.mjs` — nucleo TTS condiviso (Vercel + dev-server), usa il pacchetto `msedge-tts`.
-  - `scripts/dev-server.mjs` — server locale che replica `/api/tts` (con "clean URL").
-  - **PWA**: `manifest.webmanifest`, `sw.js` (service worker), `icons/`. Installabile,
-    avvio a schermo intero; il SW mette in cache la shell + font + audio umani (offline).
-- Audio, in ordine di priorità:
-  - **PAROLE**: registrazioni **umane reali** da **Lingua Libre/Wikimedia Commons**
-    (Q652 = italiano), cercate al volo, **normalizzate in volume** (RMS + tetto picco)
-    e riusate. URL salvati in localStorage. Speaker diversi = varietà (apprezzata).
-  - **FONEMI/SILLABE e parole senza registrazione**: **TTS Microsoft** (voci Isabella/
-    Elsa/Diego/Giuseppe) via `/api/tts`. File audio → niente troncamenti, velocità regolabile.
-  - **Ultimo ripiego** (se `/api/tts` non raggiungibile e nessuna registrazione):
-    `SpeechSynthesis` del browser (con fix per il taglio di fine parola). Il badge
-    "engine" mostra quale voce è in uso: umana / cloud / dispositivo.
-  - Riproduzione con **Web Audio API** (decode → BufferSource → GainNode, ok su iOS).
-  - Riconoscimento `SpeechRecognition` / `webkitSpeechRecognition` (modalità "Dì una parola").
-- Font: Fredoka (display) + Inter (UI). Palette calma, alto contrasto.
-- **localStorage**: liste (fonemi/parole), impostazioni (voce, volume, velocità), URL audio umani.
+- Statico + serverless per **Vercel**, file unico `index.html` (vanilla, no build).
+  - `api/tts.js` + `lib/tts.mjs` — TTS neurale **Microsoft** gratuito via `msedge-tts`
+    (motore di Edge), **nessuna chiave**. `scripts/dev-server.mjs` per il locale.
+  - **PWA**: `manifest.webmanifest`, `sw.js`, `icons/`; banner d'installazione
+    Android (prompt nativo) e iOS (istruzioni).
+- Audio: Web Audio (GainNode = volume ok su iOS; sblocco nel gesto; su iOS "ponte"
+  MediaStream→`<audio>` per scegliere l'uscita con AirPlay). Selettore uscita nel
+  badge in basso (Chrome: picker nativo; Edge: tendina; iOS: AirPlay).
+- Voci TTS con nomi Dragon Ball: Goku/Vegeta (maschili), Chichi/Laura (femminili).
+- **Registrazioni umane** (Lingua Libre/Wikimedia, CC-BY-SA) torneranno nelle fasi
+  f2–f4 per le parole: il codice di ricerca/normalizzazione è in `VersioneUno`.
+- localStorage: `aa.settings.v1`, `aa.profile.v1`, `aa.progress.v1`, `aa.sessions.v1`.
 
 ## Variabili d'ambiente
-Nessuna. Le voci Microsoft sono gratuite e senza chiave (anche su Vercel).
-Le 4 voci esposte: Isabella, Elsa (femminili), Diego, Giuseppe (maschili).
+Nessuna.
 
 ## Prova in locale
-`node scripts/dev-server.mjs` → http://localhost:5050
-- `index.html` = app. `prova-voci.html` = pagina per scegliere voce/velocità e sentire le sillabe.
+`node scripts/dev-server.mjs` → http://localhost:5050 (`prova-voci.html` = test voci).
 
-## Regola di design fondamentale (non rimuovere)
-In **ogni** modalità deve essere SEMPRE visibile a schermo cosa sta facendo l'app,
-tramite un banner di stato colorato con icona + testo:
-👆 premi · 🔊 sto suonando · ✓ premi per risentire · ⏳ aspetta che ripeta · 🎤 in ascolto · ⚠️ errore.
-Serve perché se l'utente non sente, deve comunque capire lo stato (suono sì / suono no / attesa).
+## Branch
+- `main` = versione 2 (percorso). - `VersioneUno` = vecchia app a 3 modalità (stabile).
 
-## Comandi (identici in tutte le modalità)
-- **Barra spaziatrice** o **tocco sul palco** = ascolta / risenti. Ogni pressione rifà sentire.
-- **← / →** (o pulsanti ‹ ›) = elemento precedente / successivo.
+## Backlog
+- [ ] f2 Uguali/Diversi (coppie minime per contrasto, soprasegmentali).
+- [ ] f3 Indicalo! (carte emoji, 2→4 alternative, somiglianza acustica crescente).
+- [ ] f4 Ripeti! (mic + adulto-giudice). f5 Capiscilo! (ordini, rumore graduale).
+- [ ] Difficoltà adattiva (ripeti gli errori, sali sopra l'80%).
+- [ ] Grafico dei progressi nel registro (oltre al CSV).
+- [ ] Modalità confronto microfono vs streaming Bluetooth (stesso esercizio, registri separati).
 
-## Le 3 modalità
-1. **Fonemi** — mostra a schermo la lettera/le lettere; premi e la senti; scorri con ← →.
-   Lista editabile (formato `ETICHETTA | come pronunciarlo`, es. `M | mmm`).
-2. **Parole** — premi e senti la parola; dopo l'app entra in stato "⏳ aspetta che ripeta",
-   poi si avanza con →. Lista parole editabile.
-3. **Dì una parola** — l'adulto preme 🎤 e pronuncia una parola; l'app la **scrive** grande
-   a schermo e poi **la fa sentire** (sintesi). La barra la fa risentire.
-   Fallback: se il microfono non è disponibile/autorizzato, compare un campo per **scrivere**
-   la parola (che viene comunque mostrata e pronunciata).
-
-## Impostazioni (icona ⚙)
-- Scelta voce dei fonemi (4 voci neurali Microsoft con nomi "Dragon Ball": Goku/Vegeta=
-  maschili, Chichi/Laura=femminili — solo etichette, non i veri doppiatori). Le PAROLE
-  usano una rosa casuale (umane Lingua Libre + le 4 voci TTS), senza ripetere la precedente;
-  in basso è mostrata la voce che sta parlando.
-- **Uscita audio**: scelta del dispositivo via `AudioContext.setSinkId` (Chrome/Edge
-  desktop; `selectAudioOutput()` se c'è). Metodi sperimentali per iOS: "Prova A" (clip via
-  elemento `<audio>`) e "Prova B" (ponte Web Audio→MediaStream→`<audio>`), con pulsante
-  AirPlay (`webkitShowPlaybackTargetPicker`). Su iOS lo standard non può scegliere l'uscita.
-- Volume (Web Audio GainNode) e velocità della voce (rate, default 0.9).
-- Editor liste fonemi e parole. Tutto salvato in localStorage.
-
-## Stato attuale
-App pubblicabile su Vercel con le 3 modalità, comandi tastiera+tocco, banner di stato,
-TTS cloud Azure con ripiego sulla voce del browser, volume Web Audio, scelta voce,
-persistenza localStorage, fallback testo per la modalità 3.
-
-## Limitazioni note
-- **Fonemi con voce sintetica**: vocali e consonanti continue (M, S, F, V, R, L) suonano bene;
-  le occlusive (P, T, C, B, D, G) isolate sono quasi mute → inserirle come sillabe (`PA | pa`).
-  Per qualità clinica andrebbero sostituite con **registrazioni reali**.
-- **Modalità 3**: `SpeechRecognition` richiede permesso microfono e funziona meglio su Chrome.
-
-## Prossimi passi / backlog
-- [x] Salvare liste e impostazioni in modo persistente (localStorage).
-- [x] TTS cloud di qualità (Azure) con scelta voce, volume, ripiego browser.
-- [ ] **Registro dei progressi esportabile** (es. CSV/Excel) da portare al logopedista.
-- [ ] Possibilità di caricare/registrare audio reali al posto della sintesi.
-- [ ] Altre modalità dalla scaletta: discriminazione "uguale/diverso", soprasegmentali
-      (lungo/corto, acuto/grave, ritmo), suoni ambientali, coppie minime, ascolto nel rumore,
-      "chi parla?", e una modalità di confronto microfono vs streaming Bluetooth.
-- [ ] Modalità bambino vs adulto/terapista.
-
-## Contesto utente
-Interfaccia in **italiano**. Origine: un bambino con impianto Cochlear Nucleus che in
-streaming Bluetooth percepisce solo suoni indistinti; da qui l'idea dello strumento.
+## Contesto
+Interfaccia SOLO in italiano. Origine: un bambino con impianto Cochlear Nucleus che in
+streaming Bluetooth percepisce solo suoni indistinti; ora pensata per tutti gli impiantati.

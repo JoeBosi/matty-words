@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<!-- Allenamento all'ascolto — strumento di pratica per portatori di impianto cocleare -->
-<!-- 3 modalità: Fonemi · Parole · Dì una parola. Tasti: Barra = ascolta/risenti, ← → = scorri. Tocco su mobile. -->
+<!-- Matty Words — percorso di allenamento uditivo per portatori di impianto cocleare -->
+<!-- Architettura a PERCORSO (scala di Erber): mappa a tappe, ogni tappa è un esercizio. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#E7F0EC">
@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Matty Words">
 <meta name="mobile-web-app-capable" content="yes">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -27,9 +28,9 @@
     --ink:#1E2A2E;
     --muted:#6E807F;
     --line:#D2E0DA;
-    --play:#E8743B;      /* sta suonando */
+    --play:#E8743B;      /* azione */
     --play-soft:#FCEAE0;
-    --wait:#2C8C8C;      /* in attesa / in ascolto */
+    --wait:#2C8C8C;      /* attesa / ok */
     --wait-soft:#DDF0EF;
     --idle:#8FA29F;      /* fermo */
     --idle-soft:#EDF3F1;
@@ -57,55 +58,65 @@
   .brand{font-family:'Fredoka';font-weight:500;font-size:1.1rem;color:var(--muted);margin-right:auto;letter-spacing:.2px;display:flex;align-items:center;gap:.5rem}
   .brand .logo{display:inline-flex;line-height:0}
   .brand b{font-weight:700;color:var(--ink)}
-
-  .tabs{display:flex;gap:.35rem;background:var(--surface);padding:.3rem;border-radius:14px;box-shadow:var(--shadow)}
-  .tab{
-    border:0;background:transparent;cursor:pointer;
-    font-family:'Inter';font-weight:600;font-size:.86rem;color:var(--muted);
-    padding:.5rem .8rem;border-radius:10px;transition:all .15s;white-space:nowrap;
-  }
-  .tab[aria-selected="true"]{background:var(--wait);color:#fff}
   .gear{
     border:0;background:var(--surface);box-shadow:var(--shadow);cursor:pointer;
     width:42px;height:42px;border-radius:12px;font-size:1.15rem;line-height:1;color:var(--muted);
   }
 
-  /* --- palco --- */
-  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;padding:.5rem clamp(.8rem,4vw,2rem) .5rem;min-height:0}
+  /* --- corpo --- */
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:.4rem clamp(.8rem,4vw,2rem) .4rem;min-height:0}
 
   .stage{
     width:min(640px,92vw);background:var(--surface);border-radius:30px;box-shadow:var(--shadow);
-    padding:clamp(1.4rem,5vw,2.6rem);display:flex;flex-direction:column;align-items:center;gap:1.1rem;
-    cursor:pointer;user-select:none;flex:1;justify-content:center;min-height:0;
+    padding:clamp(1rem,3.5vw,1.8rem);display:flex;flex-direction:column;align-items:center;gap:.8rem;
+    user-select:none;flex:1;justify-content:center;min-height:0;
     border:3px solid transparent;transition:border-color .15s;
-    touch-action:manipulation;
+    touch-action:manipulation;position:relative;
   }
-  .stage:active{border-color:var(--line)}
-  .counter{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.6px;text-align:center}
-  .display{
-    font-family:'Fredoka';font-weight:600;color:var(--ink);text-align:center;line-height:1;
-    font-size:clamp(3.6rem,17vw,8rem);word-break:break-word;
-  }
-  .display.word{font-size:clamp(2.6rem,11vw,5.2rem)}
-  .display.dim{color:var(--idle)}
+  .stage.touchable{cursor:pointer}
+  .stage.touchable:active{border-color:var(--line)}
 
-  /* indicatore animato del suono */
-  .bars{display:flex;align-items:flex-end;gap:6px;height:46px}
+  /* mappa del percorso */
+  .mapwrap{width:100%;height:100%;min-height:0;display:flex;flex-direction:column}
+  .map-title{font-family:'Fredoka';font-weight:600;font-size:1.05rem;color:var(--muted);text-align:center}
+  svg.map{flex:1;width:100%;min-height:0}
+  .node{cursor:pointer}
+  .node circle{fill:var(--surface);stroke:var(--wait);stroke-width:1.6;filter:drop-shadow(0 2px 3px rgba(30,42,46,.15))}
+  .node.locked circle{stroke:var(--line)}
+  .node.locked{cursor:default;opacity:.65}
+  .node text{font-family:'Inter';fill:var(--ink)}
+  .node .emo{font-size:7px}
+  .node .lab{font-size:3.4px;font-weight:600}
+  .node .st{font-size:3.4px}
+  .map path.trail{fill:none;stroke:var(--line);stroke-width:1.6;stroke-dasharray:3 2.4;stroke-linecap:round}
+
+  /* schermata esercizio */
+  .bigemo{font-size:clamp(3.4rem,16vw,6.5rem);line-height:1;display:flex;align-items:center;justify-content:center;min-height:clamp(4rem,18vw,7.5rem)}
+  .bigemo svg{width:clamp(4.5rem,20vw,8rem);height:auto;animation:breathe 2.4s ease-in-out infinite;filter:drop-shadow(0 6px 14px rgba(44,140,140,.25))}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  @media (prefers-reduced-motion:reduce){.bigemo svg{animation:none}}
+  .phase-title{font-family:'Fredoka';font-weight:600;font-size:1.15rem;color:var(--ink);text-align:center}
+  .phase-sub{font-size:.85rem;color:var(--muted);text-align:center;max-width:30rem}
+  .trialinfo{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.5px;min-height:1.2em}
+  .lingrow{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+  .lingchip{font-family:'Fredoka';font-weight:600;font-size:1rem;padding:.45rem .8rem;border-radius:12px;background:var(--idle-soft);color:var(--muted)}
+  .lingchip.ok{background:var(--wait-soft);color:var(--wait)}
+
+  /* indicatore animato (usato SOLO fuori dagli esercizi di detezione) */
+  .bars{display:flex;align-items:flex-end;gap:6px;height:40px}
   .bars span{width:9px;border-radius:6px;background:var(--idle-soft);height:14px;transition:background .2s}
   .bars.playing span{background:var(--play);animation:eq .7s ease-in-out infinite}
   .bars.playing span:nth-child(2){animation-delay:.12s}
   .bars.playing span:nth-child(3){animation-delay:.24s}
   .bars.playing span:nth-child(4){animation-delay:.36s}
   .bars.playing span:nth-child(5){animation-delay:.18s}
-  .bars.listening span{background:var(--wait);animation:eq .9s ease-in-out infinite}
-  .bars.loading span{background:var(--wait);animation:eq 1.1s ease-in-out infinite}
-  @keyframes eq{0%,100%{height:14px}50%{height:42px}}
-  @media (prefers-reduced-motion:reduce){.bars span{animation:none!important}.bars.playing span,.bars.listening span,.bars.loading span{height:30px}}
+  @keyframes eq{0%,100%{height:14px}50%{height:38px}}
+  @media (prefers-reduced-motion:reduce){.bars span{animation:none!important}.bars.playing span{height:28px}}
 
   /* --- banner di stato: SEMPRE visibile cosa sta facendo --- */
   .status{
-    width:min(640px,92vw);border-radius:18px;padding:.85rem 1.1rem;
-    display:flex;align-items:center;gap:.7rem;font-weight:600;font-size:1.02rem;
+    width:min(640px,92vw);border-radius:18px;padding:.8rem 1.1rem;
+    display:flex;align-items:center;gap:.7rem;font-weight:600;font-size:1rem;
     background:var(--idle-soft);color:var(--ink);transition:background .2s;
   }
   .status .ico{font-size:1.4rem;line-height:1;flex:none}
@@ -118,21 +129,17 @@
 
   /* --- comandi --- */
   .controls{width:min(640px,92vw);display:flex;align-items:stretch;gap:.7rem}
-  .nav,.act,.mic{border:0;cursor:pointer;font-family:'Fredoka';border-radius:18px;box-shadow:var(--shadow);transition:transform .08s,filter .15s;touch-action:manipulation}
-  .nav:active,.act:active,.mic:active{transform:translateY(2px)}
-  .nav{flex:none;width:74px;background:var(--surface);color:var(--ink);font-size:1.9rem;font-weight:500;min-height:64px}
-  .nav:disabled{opacity:.35;cursor:default}
-  .act{flex:1;background:var(--play);color:#fff;font-size:1.35rem;font-weight:600;padding:1.1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:64px}
-  .mic{flex:1;background:var(--wait);color:#fff;font-size:1.2rem;font-weight:600;padding:1.1rem;display:none;align-items:center;justify-content:center;gap:.5rem;min-height:64px}
-  body[data-mode="say"] .mic{display:flex}
-  body[data-mode="say"] .nav{display:none}
+  .nav,.act{border:0;cursor:pointer;font-family:'Fredoka';border-radius:18px;box-shadow:var(--shadow);transition:transform .08s,filter .15s;touch-action:manipulation}
+  .nav:active,.act:active{transform:translateY(2px)}
+  .nav{flex:none;min-width:74px;background:var(--surface);color:var(--ink);font-size:1.05rem;font-weight:600;padding:0 1rem;min-height:60px}
+  .act{flex:1;background:var(--play);color:#fff;font-size:1.25rem;font-weight:600;padding:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:60px}
+  .act.secondary{background:var(--wait)}
+  .act:disabled{opacity:.5;cursor:default}
 
-  .hint{font-size:.82rem;color:var(--muted);text-align:center}
-  .hint kbd{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.05rem .4rem;font-family:'Inter';font-weight:600;font-size:.78rem}
   .engine{font-size:.74rem;color:var(--muted);text-align:center;display:flex;align-items:center;gap:.35rem;justify-content:center;opacity:.85}
   .engine .ed{width:8px;height:8px;border-radius:50%;background:var(--idle)}
   .engine.cloud .ed{background:var(--wait)}
-  .outwrap{margin-top:.15rem}
+  .outwrap{margin-top:.1rem}
   .outbadge{border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:9px}
   .outbadge:hover{background:var(--idle-soft)}
   .outbadge:active{transform:translateY(1px)}
@@ -149,13 +156,8 @@
   .installbar .it{flex:1;line-height:1.35}
   .installbar .ib{border:0;background:var(--wait);color:#fff;border-radius:10px;padding:.45rem .8rem;font-family:'Fredoka';font-weight:600;font-size:.85rem;cursor:pointer}
   .installbar .ic{border:0;background:transparent;color:var(--muted);font-size:1.1rem;cursor:pointer;line-height:1;padding:.2rem}
-  .typebox{display:none;width:min(640px,92vw);gap:.5rem}
-  .typebox input{flex:1;border:2px solid var(--line);border-radius:14px;padding:.8rem 1rem;font-size:16px;font-family:'Inter';outline:none}
-  .typebox input:focus{border-color:var(--wait)}
-  .typebox button{border:0;background:var(--ink);color:#fff;border-radius:14px;padding:0 1.1rem;font-weight:600;cursor:pointer;font-size:1rem}
-  .typebox.show{display:flex}
 
-  /* --- pannello impostazioni --- */
+  /* --- pannelli --- */
   .panel{position:fixed;inset:0;background:rgba(30,42,46,.45);display:none;align-items:center;justify-content:center;padding:1rem;z-index:10}
   .panel.show{display:flex}
   .card{background:var(--surface);border-radius:22px;box-shadow:var(--shadow);padding:1.4rem;width:min(520px,94vw);max-height:88vh;overflow:auto}
@@ -163,7 +165,6 @@
   .field{margin-bottom:1.1rem}
   .field label{display:block;font-weight:600;font-size:.9rem;margin-bottom:.35rem}
   .field small{color:var(--muted);font-weight:400;display:block;margin-bottom:.4rem}
-  .field textarea{width:100%;min-height:120px;border:2px solid var(--line);border-radius:12px;padding:.7rem;font-family:'Inter';font-size:16px;resize:vertical}
   .field select{width:100%;border:2px solid var(--line);border-radius:12px;padding:.6rem .7rem;font-family:'Inter';font-size:1rem;background:var(--surface);color:var(--ink)}
   .ghostbtn{width:100%;margin-top:.5rem;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:.6rem .7rem;font-family:'Inter';font-weight:600;font-size:.95rem;cursor:pointer}
   .ghostbtn:active{transform:translateY(1px)}
@@ -171,13 +172,22 @@
   .field input[type=range]{width:100%}
   .rate-val,.vol-val{font-weight:600;color:var(--wait)}
   .enginebox{font-size:.82rem;color:var(--muted);background:var(--idle-soft);border-radius:12px;padding:.6rem .7rem;margin-bottom:1.1rem;line-height:1.4}
-  .card .save{width:100%;border:0;background:var(--wait);color:#fff;border-radius:14px;padding:.9rem;font-weight:600;font-size:1rem;cursor:pointer;font-family:'Fredoka'}
+  .card .close{float:right;border:0;background:transparent;font-size:1.4rem;cursor:pointer;color:var(--muted);line-height:1}
   .info-body{font-size:.94rem;line-height:1.55;color:var(--ink)}
   .info-body ol{padding-left:1.2rem;margin:.6rem 0}
   .info-body li{margin-bottom:.65rem}
   .info-body li::marker{font-weight:700;color:var(--wait)}
   .info-note{background:var(--idle-soft);border-radius:12px;padding:.7rem .9rem;font-size:.84rem;color:var(--muted)}
-  .card .close{float:right;border:0;background:transparent;font-size:1.4rem;cursor:pointer;color:var(--muted);line-height:1}
+
+  /* registro */
+  .reglist{font-size:.82rem;line-height:1.5;background:var(--idle-soft);border-radius:12px;padding:.7rem .9rem;margin-bottom:.6rem;max-height:160px;overflow:auto}
+  .regwarn{background:#FCEAE0;border-radius:12px;padding:.7rem .9rem;font-size:.84rem;color:#8a4a22;margin-bottom:.6rem}
+
+  /* onboarding */
+  .ob-opts{display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem}
+  .ob-opts button{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:.9rem;font-family:'Fredoka';font-weight:600;font-size:1.05rem;cursor:pointer;text-align:left}
+  .ob-opts button small{display:block;font-family:'Inter';font-weight:400;color:var(--muted);font-size:.8rem;margin-top:.15rem}
+  .ob-opts button:active{transform:translateY(1px)}
 </style>
 </head>
 <body>
@@ -194,52 +204,59 @@
     </span>
     <span><b>Matty</b> Words</span>
   </div>
-  <div class="tabs" role="tablist">
-    <button class="tab" role="tab" aria-selected="true"  data-mode="phon">Fonemi</button>
-    <button class="tab" role="tab" aria-selected="false" data-mode="word">Parole</button>
-    <button class="tab" role="tab" aria-selected="false" data-mode="say">Dì una parola</button>
-  </div>
   <button class="gear" id="book" title="La scala dell'ascolto" aria-label="Guida">📖</button>
   <button class="gear" id="gear" title="Impostazioni" aria-label="Impostazioni">⚙</button>
 </header>
 
 <main>
-  <div class="stage" id="stage" role="button" tabindex="0" aria-label="Premi per ascoltare">
-    <div class="counter" id="counter"></div>
-    <div class="display" id="display">A</div>
-    <div class="bars" id="bars"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="stage" id="stage">
+    <!-- SCHERMATA MAPPA -->
+    <div class="mapwrap" id="screenMap">
+      <div class="map-title">Il tuo percorso di ascolto</div>
+      <svg class="map" id="mapSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <!-- SCHERMATA ESERCIZIO -->
+    <div id="screenPhase" style="display:none;flex-direction:column;align-items:center;gap:.8rem;width:100%">
+      <div class="phase-title" id="phTitle"></div>
+      <div class="phase-sub" id="phSub"></div>
+      <div class="trialinfo" id="phTrial"></div>
+      <div class="bigemo" id="phEmo">👂</div>
+      <div class="lingrow" id="lingRow" style="display:none"></div>
+    </div>
   </div>
 
   <div class="status" id="status" role="status" aria-live="polite">
     <span class="ico" id="statusIco">👆</span>
-    <span id="statusText">Premi la barra (o tocca) per ascoltare</span>
+    <span id="statusText">Scegli una tappa del percorso</span>
   </div>
 
-  <div class="typebox" id="typebox">
-    <input id="typeInput" placeholder="Scrivi una parola e premi Invio" autocomplete="off" autocapitalize="none" inputmode="text">
-    <button id="typeBtn">Fai sentire</button>
+  <div class="controls" id="phaseControls" style="display:none">
+    <button class="nav" id="backMap">‹ Mappa</button>
+    <button class="act" id="phStart">Inizia</button>
+    <button class="act secondary" id="phLing" style="display:none">Check di Ling</button>
   </div>
 
-  <div class="controls">
-    <button class="nav" id="prev" aria-label="Precedente">‹</button>
-    <button class="act" id="act"><span id="actLabel">Ascolta</span></button>
-    <button class="mic" id="mic">🎤 Dì una parola</button>
-    <button class="nav" id="next" aria-label="Successivo">›</button>
-  </div>
-
-  <div class="hint" id="hint"><kbd>Barra</kbd> ascolta · <kbd>←</kbd> <kbd>→</kbd> scorri</div>
-  <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">controllo voce…</span></div>
   <div class="installbar" id="installBar" hidden>
     <span class="it" id="installText"></span>
     <button class="ib" id="installBtn" hidden>Installa</button>
     <button class="ic" id="installClose" aria-label="Chiudi">×</button>
   </div>
 
+  <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">pronto</span></div>
   <div class="engine outwrap">
     <button class="outbadge" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
     <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
   </div>
 </main>
+
+<!-- onboarding (primo avvio) -->
+<div class="panel" id="obPanel">
+  <div class="card">
+    <h2 id="obTitle">Chi si allena?</h2>
+    <div class="ob-opts" id="obOpts"></div>
+  </div>
+</div>
 
 <!-- librino: la scala dell'ascolto -->
 <div class="panel" id="infoPanel">
@@ -249,28 +266,24 @@
     <div class="info-body">
       <p>La riabilitazione uditiva segue una gerarchia classica (<b>Erber</b>), come dei
       <b>livelli di gioco</b>: si sale un gradino alla volta.</p>
-
       <ol>
-        <li><b>Detezione</b> — «c'è suono o non c'è?» Il bambino segnala quando sente
+        <li><b>Detezione</b> — «c'è suono o non c'è?» Si segnala quando si sente
         qualcosa. Qui rientra il controllo quotidiano dei <b>6 suoni di Ling</b>
         (<i>m&nbsp;·&nbsp;u&nbsp;·&nbsp;a&nbsp;·&nbsp;i&nbsp;·&nbsp;sc&nbsp;·&nbsp;s</i>), che i logopedisti
         usano per verificare che l'impianto copra tutte le frequenze.</li>
         <li><b>Discriminazione</b> — «questi due suoni sono uguali o diversi?» Non serve
         capire <i>cosa</i> sono: basta distinguerli (palla/balla, lungo/corto, forte/piano).</li>
-        <li><b>Identificazione</b> — sente una parola e la <b>indica tra alternative</b>:
-        2–4 figure o parole sullo schermo, parte l'audio, il bambino tocca quella giusta.
-        È il formato d'oro per un bambino: misurabile, giocabile, e con le immagini non
-        serve saper leggere.</li>
+        <li><b>Identificazione</b> — si sente una parola e la si <b>indica tra alternative</b>:
+        2–4 figure o parole sullo schermo. È il formato d'oro per un bambino: misurabile,
+        giocabile, e con le immagini non serve saper leggere.</li>
         <li><b>Comprensione</b> — domande, frasi, ordini semplici («tocca il naso»),
         ascolto nel rumore.</li>
       </ol>
-
-      <p>Ogni esercizio dell'app appartiene a uno di questi gradini: l'obiettivo è
-      salire la scala, dal sentire al <b>capire</b>.</p>
-
+      <p>Le tappe del percorso seguono questa scala: dal sentire al <b>capire</b>.</p>
       <p class="info-note">⚠️ Questa app <b>non è un dispositivo medico</b>: è un supporto
-      per l'allenamento. Il percorso e le liste andrebbero condivisi con la propria
-      logopedista / il proprio audiologo.</p>
+      per l'allenamento. Il percorso e i risultati andrebbero condivisi con la propria
+      logopedista / il proprio audiologo. Per confrontare i risultati nel tempo usa
+      sempre lo <b>stesso dispositivo, lo stesso volume e la stessa uscita audio</b>.</p>
     </div>
   </div>
 </div>
@@ -281,11 +294,11 @@
     <button class="close" id="close">×</button>
     <h2>Impostazioni</h2>
 
-    <div class="enginebox" id="engineBox">Controllo della voce in corso…</div>
+    <div class="enginebox" id="engineBox">Audio pronto.</div>
 
     <div class="field">
-      <label for="voiceSel">Voce dei fonemi</label>
-      <small>Voce neurale per i fonemi/lettere. Le <b>parole</b> usano invece voci a rotazione casuale (umane + neurali).</small>
+      <label for="voiceSel">Voce</label>
+      <small>Voce neurale usata per i suoni parlati (check di Ling e fasi successive).</small>
       <select id="voiceSel">
         <option value="it-IT-DiegoNeural">Goku</option>
         <option value="it-IT-GiuseppeMultilingualNeural">Vegeta</option>
@@ -314,16 +327,13 @@
     </div>
 
     <div class="field">
-      <label>Fonemi</label>
-      <small>Una riga per suono. Formato: <b>etichetta a schermo | come pronunciarlo</b>. Es. <code>M | mmm</code> oppure solo <code>A</code></small>
-      <textarea id="phonText"></textarea>
+      <label>Registro delle sessioni</label>
+      <small>Da mostrare alla logopedista. Confrontabile solo a parità di dispositivo, volume e uscita.</small>
+      <div class="regwarn" id="regWarn" style="display:none"></div>
+      <div class="reglist" id="regList">Nessuna sessione ancora.</div>
+      <button class="ghostbtn" id="regCsv" type="button">⬇️ Scarica registro (CSV)</button>
+      <button class="ghostbtn" id="obRedo" type="button">👤 Cambia profilo (bimbo/adulto, fase di partenza)</button>
     </div>
-    <div class="field">
-      <label>Parole</label>
-      <small>Una parola per riga.</small>
-      <textarea id="wordText"></textarea>
-    </div>
-    <button class="save" id="save">Salva</button>
   </div>
 </div>
 
@@ -331,77 +341,70 @@
 (function(){
   "use strict";
 
-  // ---------- dati di partenza ----------
-  // Fonemi: per le consonanti continue (m, s, f, v, r, l) la "pronuncia" è ripetuta
-  // per farla sentire come suono. Per le occlusive (p, t, c, b, d, g) conviene usare
-  // sillabe (es. "PA | pa") perché isolate sono quasi mute.
-  var DEF_PHON = [
-    {label:"A", say:"a"}, {label:"E", say:"e"}, {label:"I", say:"i"},
-    {label:"O", say:"o"}, {label:"U", say:"u"},
-    {label:"M", say:"mmm"}, {label:"N", say:"nnn"}, {label:"S", say:"sss"},
-    {label:"F", say:"fff"}, {label:"V", say:"vvv"}, {label:"R", say:"rrr"},
-    {label:"L", say:"lll"}, {label:"SC", say:"sci"}
-  ];
-  var DEF_WORDS = ["mamma","papà","palla","cane","gatto","casa","sole","acqua",
-    "pane","latte","nonna","scarpa","fiore","libro","bambino","gelato"];
+  // ============================== STATO E STORAGE ==============================
+  var LS = { settings:"aa.settings.v1", profile:"aa.profile.v1", progress:"aa.progress.v1",
+             sessions:"aa.sessions.v1", human:"aa.human.v2", installDismiss:"aa.installDismissed.v1" };
+  function loadJSON(key, def){ try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; } }
+  function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+  function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
 
   var DEF_VOICE = "it-IT-IsabellaNeural";
   var VALID_VOICES = ["it-IT-IsabellaNeural","it-IT-ElsaNeural","it-IT-DiegoNeural","it-IT-GiuseppeMultilingualNeural"];
-
-  // ---------- impostazioni persistenti (localStorage) ----------
-  var LS = { settings:"aa.settings.v1", phon:"aa.phon.v1", words:"aa.words.v1", human:"aa.human.v2" };
-  function loadJSON(key, def){
-    try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; }
-  }
-  function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+  var VOICE_SHORT = { "it-IT-IsabellaNeural":"Chichi", "it-IT-ElsaNeural":"Laura",
+                      "it-IT-DiegoNeural":"Goku", "it-IT-GiuseppeMultilingualNeural":"Vegeta" };
+  function voiceShort(v){ return VOICE_SHORT[v] || v; }
 
   var saved = loadJSON(LS.settings, {});
   var rate   = clampNum(saved.rate, 0.5, 1.2, 0.9);
   var volume = clampNum(saved.volume, 0, 1, 1);
   var currentVoice = VALID_VOICES.indexOf(saved.voice)>=0 ? saved.voice : DEF_VOICE;
-  var chosenSink = typeof saved.sink==="string" ? saved.sink : "";        // deviceId uscita audio
+  var chosenSink = typeof saved.sink==="string" ? saved.sink : "";
   var chosenSinkLabel = typeof saved.sinkLabel==="string" ? saved.sinkLabel : "";
+  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
+
+  var profile  = loadJSON(LS.profile, null);            // {type:'bimbo'|'adulto', stage:'nuovo'|'medio'|'esperto'}
+  var progress = loadJSON(LS.progress, {stars:{}, unlocked:{f0:true}});
+  var sessions = loadJSON(LS.sessions, []);             // [{t,phase,trials,hits,fa,detail,out,voice}]
+  function persistProgress(){ saveJSON(LS.progress, progress); }
+  function persistSessions(){ saveJSON(LS.sessions, sessions); }
+
   // Metodo di uscita: su iOS (AirPlay disponibile, setSinkId no) l'audio passa da un
   // "ponte" Web Audio → MediaStream → <audio>, così il selettore AirPlay può dirottarlo.
-  // Altrove si usa l'uscita standard di Web Audio. (Scelto dopo test sul campo.)
   var outMethod = (window.HTMLMediaElement && HTMLMediaElement.prototype && ("webkitShowPlaybackTargetPicker" in HTMLMediaElement.prototype)
                    && !(window.AudioContext && window.AudioContext.prototype && ("setSinkId" in window.AudioContext.prototype)))
                   ? "bridge" : "std";
 
-  var phon  = loadJSON(LS.phon, null)  || DEF_PHON.slice();
-  var words = loadJSON(LS.words, null) || DEF_WORDS.slice();
-
-  function clampNum(v,min,max,def){ v=parseFloat(v); if(!isFinite(v)) return def; return Math.max(min,Math.min(max,v)); }
-  function persistSettings(){ saveJSON(LS.settings, {rate:rate, volume:volume, voice:currentVoice, sink:chosenSink, sinkLabel:chosenSinkLabel}); }
-
-  // ---------- stato ----------
-  var mode = "phon";   // phon | word | say
-  var idx = 0;         // indice corrente (phon/word)
-  var lastSaid = "";   // ultima parola riconosciuta/scritta (modalità say)
-  var cloudReady = false;     // true se /api/tts ha una chiave configurata
-  var usingDeviceVoice = true; // engine attualmente in uso (per il badge)
-
-  // ---------- elementi ----------
+  // ============================== ELEMENTI ==============================
   var $ = function(id){return document.getElementById(id)};
-  var stage=$("stage"), display=$("display"), counter=$("counter"), bars=$("bars");
-  var statusEl=$("status"), statusIco=$("statusIco"), statusText=$("statusText");
-  var prev=$("prev"), next=$("next"), act=$("act"), actLabel=$("actLabel"), mic=$("mic");
-  var typebox=$("typebox"), typeInput=$("typeInput"), typeBtn=$("typeBtn"), hint=$("hint");
+  var stage=$("stage"), statusEl=$("status"), statusIco=$("statusIco"), statusText=$("statusText");
   var engineBadge=$("engineBadge"), engineText=$("engineText"), engineBox=$("engineBox");
+  var screenMap=$("screenMap"), screenPhase=$("screenPhase"), phaseControls=$("phaseControls");
+  var phTitle=$("phTitle"), phSub=$("phSub"), phTrial=$("phTrial"), phEmo=$("phEmo"), lingRow=$("lingRow");
 
-  // ---------- Web Audio (volume tramite GainNode: funziona anche su iOS) ----------
+  function setStatus(kind, text, ico){
+    statusEl.className = "status" + (kind==="play"?" is-play":kind==="wait"?" is-wait":kind==="err"?" is-err":"");
+    statusText.textContent = text;
+    statusIco.textContent = ico || (kind==="play"?"🔊":kind==="wait"?"⏳":kind==="err"?"⚠️":"👆");
+  }
+  // Mascotte in ascolto: il logo Matty che "respira" (al posto di un emoji triste).
+  var LISTEN_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true">'
+    +'<rect width="48" height="48" rx="14" fill="#2C8C8C"/>'
+    +'<path d="M14 28 Q24 13 34 28" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>'
+    +'<rect x="11" y="27" width="6.4" height="11" rx="3.2" fill="#E8743B"/>'
+    +'<rect x="30.6" y="27" width="6.4" height="11" rx="3.2" fill="#E8743B"/>'
+    +'<circle cx="24" cy="33" r="2.1" fill="#fff" opacity=".85"/>'
+    +'</svg>';
+  function showListen(){ phEmo.innerHTML = LISTEN_SVG; }
+  function showEmo(e){ phEmo.textContent = e; }
+
+  // ============================== MOTORE AUDIO (collaudato) ==============================
   var audioCtx=null, masterGain=null, currentSource=null, audioUnlocked=false;
-  var sinkEl=null, mediaDest=null;   // elemento <audio> e "ponte" per la scelta uscita (sperimentale)
+  var sinkEl=null, mediaDest=null;
 
   function ensureSinkEl(){
-    if(!sinkEl){
-      sinkEl = new Audio();
-      sinkEl.setAttribute("playsinline","");
-      sinkEl.preload = "auto";
-    }
+    if(!sinkEl){ sinkEl = new Audio(); sinkEl.setAttribute("playsinline",""); sinkEl.preload="auto"; }
     return sinkEl;
   }
-  // Collega masterGain in base al metodo di uscita scelto.
   function routeMasterGain(){
     if(!masterGain || !audioCtx) return;
     try{ masterGain.disconnect(); }catch(e){}
@@ -415,11 +418,10 @@
         return;
       }
     }
-    masterGain.connect(audioCtx.destination);   // uscita standard
+    masterGain.connect(audioCtx.destination);
   }
-
-  // Va chiamata DENTRO un gesto dell'utente (tap/tasto): crea il contesto al primo
-  // tocco e lo sblocca suonando un buffer muto — è il metodo che funziona su iOS.
+  // Va chiamata DENTRO un gesto utente: crea il contesto al primo tocco e lo sblocca
+  // suonando un buffer muto (necessario su iOS).
   function ensureAudio(){
     if(!audioCtx){
       var AC = window.AudioContext || window.webkitAudioContext;
@@ -428,7 +430,6 @@
       masterGain = audioCtx.createGain();
       masterGain.gain.value = volume;
       routeMasterGain();
-      // riapplica l'uscita scelta (std: sul contesto)
       if(chosenSink && outMethod==="std" && typeof audioCtx.setSinkId==="function"){ audioCtx.setSinkId(chosenSink).catch(function(){}); }
     }
     if(audioCtx.state !== "running"){ audioCtx.resume(); }
@@ -441,23 +442,35 @@
       }catch(e){}
     }
   }
-  function setVolume(v){
-    volume=v;
-    if(masterGain) masterGain.gain.value = v;
+  function setVolume(v){ volume=v; if(masterGain) masterGain.gain.value = v; }
+
+  function stopCurrent(){
+    if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
+    if('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+  async function playBuffer(audioBuf, after, clipGain){
+    stopCurrent();
+    if(audioCtx.state !== "running"){ try{ await audioCtx.resume(); }catch(e){} }
+    var src = audioCtx.createBufferSource();
+    src.buffer = audioBuf;
+    if(clipGain && clipGain!==1){
+      var g = audioCtx.createGain(); g.gain.value = clipGain;
+      src.connect(g); g.connect(masterGain);
+    } else { src.connect(masterGain); }
+    src.onended = function(){ if(currentSource===src) currentSource=null; if(after) after(); };
+    currentSource = src;
+    src.start(0);
   }
 
-  // ---------- cache audio lato client (testo+voce+velocità) ----------
+  // ---- TTS cloud (Microsoft, /api/tts) con cache; ripiego voce del browser ----
+  var cloudReady = false;
   var cache = new Map();
   function cacheKey(text, voiceId, r){ return voiceId+"|"+r+"|"+text; }
-
   async function getBuffer(text, voiceId, r){
     var k = cacheKey(text, voiceId, r);
     if(cache.has(k)) return cache.get(k);
-    var res = await fetch("/api/tts", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({text:text, voice:voiceId, rate:r})
-    });
+    var res = await fetch("/api/tts", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({text:text, voice:voiceId, rate:r}) });
     if(!res.ok) throw new Error("tts http "+res.status);
     var arr = await res.arrayBuffer();
     var audioBuf = await audioCtx.decodeAudioData(arr);
@@ -465,184 +478,6 @@
     cache.set(k, clip);
     return clip;
   }
-
-  // ---------- registrazioni umane (Lingua Libre / Wikimedia Commons) ----------
-  // Q652 = lingua italiana. I file si chiamano "LL-Q652 (ita)-Speaker-parola.wav".
-  // Cerchiamo la parola, scarichiamo l'audio, NORMALIZZIAMO il volume e riusiamo.
-  var humanUrls = loadJSON(LS.human, {}); // parola -> [url, ...]  (lista registrazioni; [] = nessuna)
-  var bufByUrl = new Map();               // url -> {buffer, gain}  (solo in memoria)
-
-  // Override manuale: per alcune parole limitiamo/forziamo le registrazioni usate.
-  // Valore = lista di URL usati a rotazione CASUALE (oppure [] per forzare la voce sintetica).
-  var HUMAN_OVERRIDE = {
-    // "mamma": teniamo solo le due voci buone (escludendo quella che suonava male)
-    "mamma": [
-      "https://upload.wikimedia.org/wikipedia/commons/5/59/LL-Q652_%28ita%29-LangPao-mamma.wav",
-      "https://upload.wikimedia.org/wikipedia/commons/7/7c/LL-Q652_%28ita%29-Happypheasant-mamma.wav"
-    ]
-  };
-
-  // Ritorna la LISTA delle registrazioni umane per una parola (da override, cache o ricerca).
-  async function findHumanList(word){
-    word = word.toLowerCase().trim();
-    if(Object.prototype.hasOwnProperty.call(HUMAN_OVERRIDE, word)){
-      var ov = HUMAN_OVERRIDE[word] || [];
-      humanUrls[word] = ov; saveJSON(LS.human, humanUrls);
-      return ov;
-    }
-    if(Object.prototype.hasOwnProperty.call(humanUrls, word)) return humanUrls[word] || [];
-    var api = "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*"
-      + "&generator=search&gsrnamespace=6&gsrlimit=20"
-      + "&gsrsearch=" + encodeURIComponent("LL-Q652 (ita) " + word)
-      + "&prop=imageinfo&iiprop=url|mime";
-    var list = [];
-    try{
-      var r = await fetch(api);
-      if(r.ok){
-        var j = await r.json();
-        var pages = (j.query && j.query.pages) ? Object.keys(j.query.pages).map(function(k){return j.query.pages[k];}) : [];
-        pages.forEach(function(p){
-          var t = (p.title||"").toLowerCase();
-          var ok = t.indexOf("ll-q652")>=0 && t.lastIndexOf("-"+word+".wav") === t.length-("-"+word+".wav").length;
-          if(ok && p.imageinfo && p.imageinfo[0]) list.push(p.imageinfo[0].url);
-        });
-      }
-    }catch(e){ return []; } // rete assente: non memorizziamo, riproveremo
-    humanUrls[word] = list;          // memorizza l'esito (anche [] = non trovata) per non ricercare
-    saveJSON(LS.human, humanUrls);
-    return list;
-  }
-
-  // Normalizzazione del volume: pareggia la loudness (RMS) con tetto sul picco (no clipping).
-  function computeNormGain(ab){
-    var d = ab.getChannelData(0), peak=0, sum=0, n=d.length;
-    for(var i=0;i<n;i++){ var s=d[i]<0?-d[i]:d[i]; if(s>peak)peak=s; sum += d[i]*d[i]; }
-    var rms = Math.sqrt(sum/n) || 0.0001;
-    var TARGET_RMS = 0.14, CEIL = 0.97;
-    var g = Math.min(TARGET_RMS/rms, CEIL/(peak||CEIL));
-    if(!isFinite(g) || g<=0) g = 1;
-    return g;
-  }
-  async function bufferForUrl(url){
-    if(bufByUrl.has(url)) return bufByUrl.get(url);
-    var r = await fetch(url);
-    if(!r.ok) return null;
-    var arr = await r.arrayBuffer();
-    var ab = await audioCtx.decodeAudioData(arr);
-    var entry = { buffer: ab, gain: computeNormGain(ab) };
-    bufByUrl.set(url, entry);
-    return entry;
-  }
-  function humanKnown(word){ return Object.prototype.hasOwnProperty.call(humanUrls, (word||"").toLowerCase().trim()); }
-
-  // Nome breve della voce TTS, ed estrazione dello speaker dall'URL di Lingua Libre.
-  // Nomi "divertenti" in stile Dragon Ball (italiano). Le voci reali restano quelle
-  // neurali Microsoft: NON sono i veri doppiatori del cartone (non è possibile).
-  var VOICE_SHORT = { "it-IT-IsabellaNeural":"Chichi", "it-IT-ElsaNeural":"Laura",
-                      "it-IT-DiegoNeural":"Goku", "it-IT-GiuseppeMultilingualNeural":"Vegeta" };
-  function voiceShort(v){ return VOICE_SHORT[v] || v; }
-  function speakerFromUrl(u){
-    try{ var f=decodeURIComponent(u.split("/").pop()); var m=/\(ita\)-(.*)-[^-]+\.wav$/i.exec(f); return m ? m[1] : "voce umana"; }
-    catch(e){ return "voce umana"; }
-  }
-  // Le voci TTS che entrano nella "rosa" casuale.
-  function ttsOptions(){ return VALID_VOICES.map(function(v){ return { type:"tts", voice:v, name:voiceShort(v) }; }); }
-  function voiceKey(o){ return o.type==="human" ? ("h:"+o.url) : ("t:"+o.voice); }
-
-  // ---------- riproduzione ----------
-  function stopCurrent(){
-    if(currentSource){ try{ currentSource.onended=null; currentSource.stop(); }catch(e){} currentSource=null; }
-    if('speechSynthesis' in window) speechSynthesis.cancel();
-  }
-  // Riproduce un "clip" ({buffer,gain}).
-  async function playClip(clip, mid, after){
-    if(!clip) return;
-    return playBuffer(clip.buffer, mid, after, clip.gain);
-  }
-  // Indica quale voce è in uso. `detail` (es. "Umana · LangPao") mostra QUALE voce
-  // sta parlando tra le varie opzioni; se assente, mostra l'etichetta generica.
-  function setEngine(kind, detail){
-    usingDeviceVoice = (kind==="device");
-    engineBadge.classList.toggle("cloud", kind!=="device");
-    var base = kind==="human" ? "Voce umana (reale)"
-             : kind==="cloud" ? "Voce neurale (Microsoft)"
-             : "Voce del dispositivo";
-    engineText.textContent = detail ? detail : base;
-  }
-
-  async function playBuffer(audioBuf, mid, after, clipGain){
-    stopCurrent();
-    // FIX iOS: assicura che il contesto sia attivo prima di suonare, altrimenti il
-    // secondo suono (in cache, istantaneo) partirebbe su un contesto sospeso = silenzio.
-    if(audioCtx.state !== "running"){ try{ await audioCtx.resume(); }catch(e){} }
-    var src = audioCtx.createBufferSource();
-    src.buffer = audioBuf;
-    if(clipGain && clipGain!==1){
-      var g = audioCtx.createGain(); g.gain.value = clipGain;
-      src.connect(g); g.connect(masterGain);   // normalizzazione del singolo clip
-    } else {
-      src.connect(masterGain);
-    }
-    src.onended = function(){ if(currentSource===src) currentSource=null; setBars(""); if(after) after(); };
-    currentSource = src;
-    setBars("playing");
-    if(mid) setStatus.apply(null, mid);
-    src.start(0);
-  }
-
-  // Parla una PAROLA scegliendo a CASO dalla "rosa": registrazioni umane (Lingua Libre)
-  // + voci TTS neurali. Evita di ripetere la voce della volta precedente. Mostra in
-  // basso quale voce sta parlando (es. "Umana · LangPao" o "Microsoft · Diego").
-  var lastVoiceKey = "";
-  async function speakWord(text, mid, after){
-    if(!text){ return; }
-    ensureAudio();
-    stopCurrent();
-    if(audioCtx){
-      try{
-        if(!humanKnown(text)){ setStatus("wait","Cerco la voce…","⏳"); setBars("loading"); }
-        // costruisci la rosa: umane disponibili + voci TTS (se il cloud è raggiungibile)
-        var humans = (await findHumanList(text) || []).map(function(u){ return { type:"human", url:u, name:speakerFromUrl(u) }; });
-        var pool = humans.concat(cloudReady ? ttsOptions() : []);
-        if(pool.length){
-          var choices = pool;
-          if(pool.length > 1){ choices = pool.filter(function(o){ return voiceKey(o) !== lastVoiceKey; }); if(!choices.length) choices = pool; }
-          var opt = choices[ Math.floor(Math.random() * choices.length) ];
-          lastVoiceKey = voiceKey(opt);
-          if(opt.type === "human"){
-            var e = await bufferForUrl(opt.url);
-            if(e){ setEngine("human", "Umana · " + opt.name); playClip(e, mid, after); return; }
-          } else {
-            var clip = await getBuffer(text, opt.voice, rate);
-            setEngine("cloud", opt.name); playClip(clip, mid, after); return;
-          }
-        }
-      }catch(e){ /* problemi di rete: ripiego sotto */ }
-    }
-    speak(text, mid, after);
-  }
-
-  // Parla: prova il cloud (alta qualità), altrimenti ripiega sulla voce del browser.
-  async function speak(text, mid, after){
-    if(!text){ return; }
-    ensureAudio();
-    stopCurrent();
-    if(cloudReady && audioCtx){
-      try{
-        var k = cacheKey(text, currentVoice, rate);
-        if(!cache.has(k)){ setStatus("wait","Preparo l'audio…","⏳"); setBars("loading"); }
-        var clip = await getBuffer(text, currentVoice, rate);
-        setEngine("cloud", voiceShort(currentVoice));
-        playClip(clip, mid, after);
-        return;
-      }catch(err){
-        // problema di rete/quota: ripiego sulla voce del dispositivo per questa volta
-      }
-    }
-    speakBrowser(text, mid, after);
-  }
-
-  // ---------- voce del browser (ripiego) ----------
   var browserVoice = null;
   function pickBrowserVoice(){
     if(!('speechSynthesis' in window)) return;
@@ -650,203 +485,430 @@
     browserVoice = vs.find(function(v){return /^it(-|_)/i.test(v.lang)}) ||
                    vs.find(function(v){return /it/i.test(v.lang)}) || null;
   }
-  if('speechSynthesis' in window){
-    pickBrowserVoice();
-    speechSynthesis.onvoiceschanged = pickBrowserVoice;
-  }
-  function speakBrowser(text, mid, after){
-    if(!('speechSynthesis' in window)){ setStatus("err","Audio non disponibile su questo browser."); setBars(""); return; }
-    setEngine("device");
+  if('speechSynthesis' in window){ pickBrowserVoice(); speechSynthesis.onvoiceschanged = pickBrowserVoice; }
+  function speakBrowser(text, after){
+    if(!('speechSynthesis' in window)){ if(after) after(); return; }
     speechSynthesis.cancel();
-    // Lo spazio finale riduce un bug noto di SpeechSynthesis che tronca la fine
-    // delle parole corte (es. "mamma" -> "mamm"). Con la voce cloud non serve.
     var u = new SpeechSynthesisUtterance(text + " ");
     u.lang = "it-IT"; if(browserVoice) u.voice = browserVoice;
     u.rate = rate; u.volume = volume; u.pitch = 1;
-    u.onstart = function(){ setBars("playing"); if(mid) setStatus.apply(null,mid); };
-    u.onend   = function(){ setBars(""); if(after) after(); };
-    u.onerror = function(){ setBars(""); };
+    u.onend = function(){ if(after) after(); };
+    u.onerror = function(){ if(after) after(); };
     speechSynthesis.speak(u);
-    // Workaround Chrome: a volte la sintesi resta "in pausa"; un resume la sblocca.
     setTimeout(function(){ try{ speechSynthesis.resume(); }catch(e){} }, 60);
   }
-
-  // ---------- helper UI ----------
-  function setBars(state){ bars.className = "bars" + (state? " "+state : ""); }
-  function setStatus(kind, text, ico){
-    statusEl.className = "status" + (kind==="play"?" is-play":kind==="wait"?" is-wait":kind==="err"?" is-err":"");
-    statusText.textContent = text;
-    statusIco.textContent = ico || (kind==="play"?"🔊":kind==="wait"?"⏳":kind==="err"?"⚠️":"👆");
-  }
-
-  // ---------- render del palco ----------
-  function render(){
-    document.body.setAttribute("data-mode", mode);
-    typebox.classList.remove("show");
-    setBars("");
-
-    if(mode==="phon"){
-      actLabel.textContent="Ascolta";
-      hint.innerHTML='<kbd>Barra</kbd> ascolta · <kbd>←</kbd> <kbd>→</kbd> scorri';
-      counter.textContent = "Suono " + (idx+1) + " di " + phon.length;
-      display.className="display"; display.textContent = phon[idx].label;
-      prev.disabled = idx===0; next.disabled = idx===phon.length-1;
-      setStatus("","Premi per sentire il suono","👆");
-    }
-    else if(mode==="word"){
-      actLabel.textContent="Ascolta";
-      hint.innerHTML='<kbd>Barra</kbd> ascolta · <kbd>→</kbd> prossima parola';
-      counter.textContent = "Parola " + (idx+1) + " di " + words.length;
-      display.className="display word"; display.textContent = words[idx];
-      prev.disabled = idx===0; next.disabled = idx===words.length-1;
-      setStatus("","Premi per sentire la parola","👆");
-    }
-    else { // say
-      hint.innerHTML='<kbd>Barra</kbd> risenti · pulsante 🎤 per dire una nuova parola';
-      counter.textContent = "Dì una parola, comparirà qui";
-      if(lastSaid){ display.className="display word"; display.textContent = lastSaid; }
-      else { display.className="display word dim"; display.textContent = "…"; }
-      actLabel.textContent = lastSaid ? "Risenti" : "Ascolta";
-      setStatus("","Premi 🎤 e di' una parola vicino al microfono","🎤");
-    }
-  }
-
-  // ---------- azioni ----------
-  function play(){
+  // Pronuncia `text` e chiama after() alla fine (cloud → ripiego browser).
+  async function speakDetect(text, after){
     ensureAudio();
-    if(mode==="phon"){
-      speak(phon[idx].say,
-        ["play","Sto facendo il suono…","🔊"],
-        function(){ setStatus("","Premi di nuovo per risentire","✓"); });
+    if(cloudReady && audioCtx){
+      try{ var clip = await getBuffer(text, currentVoice, rate); playBuffer(clip.buffer, after, clip.gain); return; }
+      catch(e){}
     }
-    else if(mode==="word"){
-      speakWord(words[idx],
-        ["play","Sto dicendo la parola…","🔊"],
-        function(){ setStatus("wait","Aspetta che la ripeta, poi premi → per la prossima","⏳"); });
-    }
-    else { // say -> risenti
-      if(lastSaid){
-        speakWord(lastSaid,["play","La faccio sentire…","🔊"],
-          function(){ setStatus("","Premi di nuovo per risentire · 🎤 per una nuova","✓"); });
-      } else {
-        listen();
-      }
-    }
+    speakBrowser(text, after);
   }
-
-  function step(d){
-    if(mode==="phon"){ idx=Math.min(Math.max(idx+d,0),phon.length-1); render(); prewarmCurrent(); }
-    else if(mode==="word"){ idx=Math.min(Math.max(idx+d,0),words.length-1); render(); prewarmCurrent(); }
-  }
-
-  // ---------- riconoscimento vocale (modalità "say") ----------
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var rec = null;
-  function listen(){
-    ensureAudio();
-    if(!SR){ fallbackType("Il riconoscimento vocale non è disponibile su questo browser. Scrivi la parola qui sotto."); return; }
+  async function detectEngine(){
     try{
-      rec = new SR(); rec.lang="it-IT"; rec.interimResults=false; rec.maxAlternatives=1;
-      typebox.classList.remove("show");
-      bars.className="bars listening";
-      setStatus("wait","In ascolto… di' una parola","🎤");
-      display.className="display word dim"; display.textContent="…";
-      rec.onresult = function(e){
-        var w = (e.results[0][0].transcript||"").trim();
-        bars.className="bars";
-        if(!w){ setStatus("err","Non ho capito, riprova","⚠️"); return; }
-        lastSaid = w;
-        display.className="display word"; display.textContent = w;
-        actLabel.textContent="Risenti";
-        speakWord(w,["play","Ho capito «"+w+"» — la faccio sentire…","✍️"],
-          function(){ setStatus("","Premi per risentire · 🎤 per una nuova parola","✓"); });
-      };
-      rec.onerror = function(ev){
-        bars.className="bars";
-        if(ev.error==="not-allowed" || ev.error==="service-not-allowed"){
-          fallbackType("Microfono non autorizzato. Consenti il microfono nel browser, oppure scrivi qui sotto.");
-        } else if(ev.error==="no-speech"){
-          setStatus("err","Non ho sentito nulla, riprova","⚠️");
-        } else {
-          fallbackType("Riconoscimento non riuscito. Puoi scrivere la parola qui sotto.");
-        }
-      };
-      rec.start();
-    }catch(err){ fallbackType("Riconoscimento non disponibile. Scrivi la parola qui sotto."); }
-  }
-  function fallbackType(msg){
-    setStatus("err", msg, "✍️");
-    typebox.classList.add("show");
-    setTimeout(function(){ typeInput.focus(); },50);
-  }
-  function sayTyped(){
-    var w = typeInput.value.trim(); if(!w) return;
-    lastSaid = w; typeInput.value="";
-    display.className="display word"; display.textContent=w;
-    actLabel.textContent="Risenti";
-    speakWord(w,["play","La faccio sentire…","🔊"],
-      function(){ setStatus("","Premi per risentire · 🎤 per una nuova parola","✓"); });
+      var res = await fetch("/api/tts", {method:"GET"});
+      if(res.ok){ var j = await res.json(); cloudReady = !!j.configured; }
+    }catch(e){ cloudReady=false; }
+    engineBadge.classList.toggle("cloud", cloudReady);
+    engineText.textContent = cloudReady ? ("Voce: " + voiceShort(currentVoice)) : "Voce del dispositivo";
+    engineBox.textContent = cloudReady ? "Voce neurale attiva (gratis, nessuna chiave)." : "Voce neurale non raggiungibile: uso la voce del dispositivo.";
   }
 
-  // ---------- eventi ----------
-  stage.addEventListener("click", play);
-  act.addEventListener("click", play);
-  prev.addEventListener("click", function(){ step(-1); });
-  next.addEventListener("click", function(){ step(1); });
-  mic.addEventListener("click", listen);
-  typeBtn.addEventListener("click", sayTyped);
-  typeInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); sayTyped(); } });
+  // ---- suoni sintetici (Fase 0/1): generati al volo, funzionano anche offline ----
+  // Tutti passano dal masterGain (volume + uscita scelta). Ritornano la durata in ms.
+  function synthDrum(){
+    ensureAudio(); if(!audioCtx) return 0;
+    var dur=1.8, n=3;
+    for(var i=0;i<n;i++){
+      var t0=audioCtx.currentTime + i*0.6;
+      var len=Math.floor(audioCtx.sampleRate*0.35);
+      var buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+      var d=buf.getChannelData(0);
+      for(var j=0;j<len;j++){ d[j]=(Math.random()*2-1)*Math.pow(1-j/len,2.2); }
+      var src=audioCtx.createBufferSource(); src.buffer=buf;
+      var f=audioCtx.createBiquadFilter(); f.type="lowpass"; f.frequency.value=180;
+      var g=audioCtx.createGain(); g.gain.value=1.6;
+      src.connect(f); f.connect(g); g.connect(masterGain);
+      src.start(t0);
+    }
+    return dur*1000;
+  }
+  function synthWhistle(){
+    ensureAudio(); if(!audioCtx) return 0;
+    var dur=1.6, t0=audioCtx.currentTime;
+    var o=audioCtx.createOscillator(); o.type="sine"; o.frequency.value=1100;
+    var lfo=audioCtx.createOscillator(); lfo.frequency.value=6;
+    var lg=audioCtx.createGain(); lg.gain.value=40;
+    lfo.connect(lg); lg.connect(o.frequency);
+    var g=audioCtx.createGain();
+    g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(0.5,t0+0.06);
+    g.gain.setValueAtTime(0.5,t0+dur-0.12); g.gain.linearRampToValueAtTime(0,t0+dur);
+    o.connect(g); g.connect(masterGain);
+    o.start(t0); o.stop(t0+dur); lfo.start(t0); lfo.stop(t0+dur);
+    return dur*1000;
+  }
+  function synthTone(freq, durSec, gainVal){
+    ensureAudio(); if(!audioCtx) return 0;
+    var t0=audioCtx.currentTime;
+    var o=audioCtx.createOscillator(); o.type="sine"; o.frequency.value=freq;
+    var g=audioCtx.createGain();
+    g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(gainVal,t0+0.04);
+    g.gain.setValueAtTime(gainVal,t0+durSec-0.08); g.gain.linearRampToValueAtTime(0,t0+durSec);
+    o.connect(g); g.connect(masterGain);
+    o.start(t0); o.stop(t0+durSec);
+    return durSec*1000;
+  }
 
-  document.querySelectorAll(".tab").forEach(function(t){
-    t.addEventListener("click", function(){
-      document.querySelectorAll(".tab").forEach(function(x){ x.setAttribute("aria-selected", x===t?"true":"false"); });
-      mode = t.getAttribute("data-mode"); idx=0; lastSaid=""; render();
-      prewarmCurrent();
+  // ============================== DEFINIZIONE FASI ==============================
+  // Suoni F0: salienti e lunghi. Suoni F1: brevi, più deboli, varie frequenze.
+  var F0_SOUNDS = [
+    {name:"tamburo",  fire:function(){ return synthDrum(); }},
+    {name:"fischio",  fire:function(){ return synthWhistle(); }},
+    {name:"tono basso",fire:function(){ return synthTone(300, 1.6, 0.7); }}
+  ];
+  var F1_SOUNDS = [
+    {name:"250 Hz",  fire:function(){ return synthTone(250, 0.7, 0.45); }},
+    {name:"500 Hz",  fire:function(){ return synthTone(500, 0.7, 0.4); }},
+    {name:"1 kHz",   fire:function(){ return synthTone(1000, 0.6, 0.35); }},
+    {name:"2 kHz",   fire:function(){ return synthTone(2000, 0.6, 0.3); }},
+    {name:"4 kHz",   fire:function(){ return synthTone(4000, 0.6, 0.3); }}
+  ];
+  // 6 suoni di Ling (pronunciati dalla voce TTS).
+  var LING = [
+    {key:"m",  say:"mmm"}, {key:"u", say:"u"}, {key:"a", say:"a"},
+    {key:"i",  say:"i"},   {key:"sc",say:"sci"},{key:"s", say:"sss"}
+  ];
+
+  var PHASES = [
+    { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono. Niente fretta: i suoni arrivano quando meno te lo aspetti.", trials:8,  sounds:F0_SOUNDS, catchRate:0,   ling:false },
+    { id:"f1", emoji:"👂", label:"Lo senti?",      sub:"Suoni più brevi e leggeri. Tocca solo quando senti davvero qualcosa!", trials:10, sounds:F1_SOUNDS, catchRate:0.2, ling:true },
+    { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", locked:true },
+    { id:"f3", emoji:"👉", label:"Indicalo!",          locked:true },
+    { id:"f4", emoji:"🗣️", label:"Ripeti!",            locked:true },
+    { id:"f5", emoji:"🧠", label:"Capiscilo!",          locked:true }
+  ];
+  function phaseById(id){ for(var i=0;i<PHASES.length;i++){ if(PHASES[i].id===id) return PHASES[i]; } return null; }
+  function isUnlocked(p){ return !p.locked && !!progress.unlocked[p.id]; }
+
+  // ============================== MAPPA ==============================
+  var NODE_POS = { f0:[20,84], f1:[52,69], f2:[22,53], f3:[58,38], f4:[26,23], f5:[60,9] };
+  function starsStr(n){ return n>0 ? "⭐".repeat(n) : ""; }
+  function renderMap(){
+    var svg=$("mapSvg"); var parts=[];
+    // sentiero
+    var pts=PHASES.map(function(p){ var c=NODE_POS[p.id]; return c[0]+","+c[1]; }).join(" ");
+    parts.push('<polyline class="trail" points="'+pts+'"></polyline>');
+    PHASES.forEach(function(p){
+      var c=NODE_POS[p.id], locked = !isUnlocked(p);
+      var stars = progress.stars[p.id]||0;
+      parts.push('<g class="node'+(locked?' locked':'')+'" data-phase="'+p.id+'" role="button" aria-label="'+p.label+'">'
+        +'<circle cx="'+c[0]+'" cy="'+c[1]+'" r="7.4"></circle>'
+        +'<text class="emo" x="'+c[0]+'" y="'+(c[1]+2.4)+'" text-anchor="middle">'+(locked?'🔒':p.emoji)+'</text>'
+        +'<text class="lab" x="'+c[0]+'" y="'+(c[1]+11.4)+'" text-anchor="middle">'+p.label+'</text>'
+        +'<text class="st" x="'+c[0]+'" y="'+(c[1]+15.4)+'" text-anchor="middle">'+(locked?(p.locked?'in arrivo':''):starsStr(stars))+'</text>'
+        +'</g>');
     });
-  });
+    svg.innerHTML = parts.join("");
+    svg.querySelectorAll(".node").forEach(function(n){
+      n.addEventListener("click", function(){
+        var p = phaseById(n.getAttribute("data-phase"));
+        if(!p || !isUnlocked(p)) { if(p&&p.locked) setStatus("","Questa tappa arriva presto!","🔒"); return; }
+        openPhase(p);
+      });
+    });
+  }
 
+  // ============================== SCHERMATE ==============================
+  var curPhase=null;
+  function showMap(){
+    abortSession();
+    curPhase=null;
+    screenMap.style.display="flex";
+    screenPhase.style.display="none";
+    phaseControls.style.display="none";
+    stage.classList.remove("touchable");
+    setStatus("","Scegli una tappa del percorso","👆");
+    renderMap();
+  }
+  function openPhase(p){
+    curPhase=p;
+    screenMap.style.display="none";
+    screenPhase.style.display="flex";
+    phaseControls.style.display="flex";
+    phTitle.textContent = p.emoji+" "+p.label;
+    phSub.textContent = p.sub||"";
+    phTrial.textContent = "";
+    showListen();
+    lingRow.style.display="none";
+    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
+    $("phLing").style.display = p.ling ? "flex" : "none";
+    stage.classList.remove("touchable");
+    setStatus("","Premi «Inizia» quando sei pronto","👆");
+  }
+
+  // ============================== MOTORE DELLE PROVE (detezione) ==============================
+  // NOTA DI DESIGN: durante la detezione lo stato NON mostra "sto suonando" e niente
+  // barre animate: qualunque indizio visivo svuoterebbe l'esercizio. Lo stato resta
+  // neutro («tocca appena senti») e il riscontro arriva DOPO la risposta.
+  var S = null;   // sessione corrente
+  var timers = [];
+  function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function abortSession(){ clearTimers(); stopCurrent(); S=null; document.body.removeAttribute("data-trial"); }
+
+  function startSession(){
+    ensureAudio();
+    var p=curPhase; if(!p) return;
+    S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", soundName:"" };
+    $("phStart").disabled=true; $("phStart").textContent="In corso…";
+    $("phLing").style.display="none";
+    stage.classList.add("touchable");
+    showListen();
+    setStatus("wait","Tocca lo schermo appena senti un suono","👂");
+    nextTrial();
+  }
+  function nextTrial(){
+    if(!S) return;
+    if(S.n >= S.phase.trials){ finishSession(); return; }
+    S.n++;
+    phTrial.textContent = "Prova "+S.n+" di "+S.phase.trials;
+    showListen();
+    setStatus("wait","Tocca lo schermo appena senti un suono","👂");
+    S.state="waiting"; document.body.setAttribute("data-trial","waiting");
+    var delay = 2000 + Math.random()*4000;
+    later(function(){
+      if(!S || S.state!=="waiting") return;
+      if(Math.random() < (S.phase.catchRate||0)){
+        // prova "trabocchetto": nessun suono; successo = NON toccare
+        S.state="catch"; S.catchN++; document.body.setAttribute("data-trial","catch");
+        later(function(){ if(S && S.state==="catch"){ S.catchOk++; feedback("🤫","Bravo: non c'era nessun suono!", "wait"); } }, 4000);
+        return;
+      }
+      var snd = S.phase.sounds[Math.floor(Math.random()*S.phase.sounds.length)];
+      S.soundName = snd.name;
+      S.state="sounding"; document.body.setAttribute("data-trial","sounding");
+      var dur = snd.fire() || 800;
+      later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 1800);
+    }, delay);
+  }
+  function feedback(emo, text, kind){
+    if(!S) return;
+    S.state="feedback"; document.body.setAttribute("data-trial","feedback");
+    clearTimers();
+    showEmo(emo);
+    setStatus(kind||"", text, emo);
+    later(nextTrial, 1100);
+  }
+  function onStageTouch(){
+    if(!S) return;
+    if(S.state==="sounding"){ S.hits++; feedback("🎉","Sentito! Bravo!","wait"); }
+    else if(S.state==="waiting" || S.state==="catch"){
+      S.fa++;
+      if(S.state==="catch"){ feedback("🙈","Non c'era nessun suono… aspetta!",""); }
+      else { showEmo("🙈"); setStatus("","Aspetta il suono…","🙈"); }
+    }
+  }
+  function starsFor(score){ return score>=0.85?3 : score>=0.65?2 : score>=0.4?1 : 0; }
+  function finishSession(){
+    var p=S.phase;
+    var total = p.trials, good = S.hits + S.catchOk;
+    var score = total? good/total : 0;
+    var st = starsFor(score);
+    var prev = progress.stars[p.id]||0;
+    if(st>prev) progress.stars[p.id]=st;
+    // sblocco della tappa successiva con almeno 2 stelle
+    if(p.id==="f0" && st>=2) progress.unlocked.f1=true;
+    persistProgress();
+    saveSession({ phase:p.id, trials:total, hits:S.hits, fa:S.fa, detail:"catch "+S.catchOk+"/"+S.catchN });
+    showEmo(st>=2 ? "🏆" : "🏁");
+    phTrial.textContent = "";
+    setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    stage.classList.remove("touchable");
+    document.body.removeAttribute("data-trial");
+    S=null;
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
+    if(curPhase && curPhase.ling) $("phLing").style.display="flex";
+  }
+
+  // ---- Check di Ling (detezione dei 6 suoni parlati) ----
+  var L=null;
+  function startLing(){
+    ensureAudio();
+    if(!curPhase) return;
+    L = { order: LING.slice().sort(function(){return Math.random()-0.5;}), i:0, res:{}, state:"idle" };
+    $("phStart").style.display="none";
+    $("phLing").disabled=true; $("phLing").textContent="In corso…";
+    stage.classList.add("touchable");
+    lingRow.style.display="none";
+    showListen();
+    setStatus("wait","Tocca appena senti una voce","👂");
+    lingNext();
+  }
+  function lingNext(){
+    if(!L) return;
+    if(L.i >= L.order.length){ lingFinish(); return; }
+    var item = L.order[L.i];
+    phTrial.textContent = "Suono "+(L.i+1)+" di 6";
+    showListen();
+    setStatus("wait","Tocca appena senti una voce","👂");
+    L.state="waiting";
+    later(function(){
+      if(!L || L.state!=="waiting") return;
+      L.state="sounding";
+      speakDetect(item.say, function(){
+        later(function(){ if(L && L.state==="sounding"){ L.res[item.key]=0; L.i++; lingFeedback("💤"); } }, 1600);
+      });
+    }, 1500 + Math.random()*2500);
+  }
+  function lingFeedback(emo){
+    if(!L) return;
+    L.state="feedback"; clearTimers(); stopCurrent();
+    showEmo(emo);
+    later(lingNext, 900);
+  }
+  function lingTouch(){
+    if(!L) return;
+    if(L.state==="sounding"){ var item=L.order[L.i]; L.res[item.key]=1; L.i++; lingFeedback("🎉"); }
+    else if(L.state==="waiting"){ showEmo("🙈"); }
+  }
+  function lingFinish(){
+    var res=L.res; L=null;
+    stage.classList.remove("touchable");
+    clearTimers();
+    var heard=0;
+    lingRow.innerHTML = LING.map(function(s){ var ok=res[s.key]===1; if(ok) heard++;
+      return '<span class="lingchip'+(ok?' ok':'')+'">'+(ok?'✓ ':'· ')+s.key+'</span>'; }).join("");
+    lingRow.style.display="flex";
+    phTrial.textContent="";
+    showEmo(heard===6 ? "🏆" : "🔎");
+    setStatus(heard===6?"wait":"", "Check di Ling: "+heard+" su 6 suoni sentiti", heard===6?"🏆":"🔎");
+    saveSession({ phase:"ling", trials:6, hits:heard, fa:0,
+      detail: LING.map(function(s){return s.key+"="+(res[s.key]||0);}).join(" ") });
+    $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Allenamento";
+    $("phLing").disabled=false; $("phLing").textContent="Check di Ling"; $("phLing").style.display="flex";
+  }
+
+  // ============================== REGISTRO ==============================
+  function currentOutName(){ return chosenSinkLabel || (outMethod==="bridge"?"sistema/AirPlay":"predefinita"); }
+  function saveSession(s){
+    s.t = new Date().toISOString();
+    s.out = currentOutName();
+    s.voice = voiceShort(currentVoice);
+    sessions.push(s);
+    if(sessions.length>500) sessions = sessions.slice(-500);
+    persistSessions();
+  }
+  var PHASE_NAMES = {f0:"C'è un suono!", f1:"Lo senti?", ling:"Check di Ling"};
+  function renderRegistro(){
+    var list=$("regList");
+    if(!sessions.length){ list.textContent="Nessuna sessione ancora."; }
+    else{
+      list.innerHTML = sessions.slice(-8).reverse().map(function(s){
+        var d=new Date(s.t);
+        var dd=("0"+d.getDate()).slice(-2)+"/"+("0"+(d.getMonth()+1)).slice(-2)+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+        return dd+" · "+(PHASE_NAMES[s.phase]||s.phase)+" · "+s.hits+"/"+s.trials+(s.fa?" · "+s.fa+" falsi allarmi":"")+" · 🔈 "+s.out;
+      }).join("<br>");
+    }
+    // "termometro": se le ultime 3 sessioni di detezione hanno 0 riuscite → nota calma
+    var det = sessions.filter(function(s){return s.phase==="f0"||s.phase==="f1"||s.phase==="ling";}).slice(-3);
+    var warn=$("regWarn");
+    if(det.length>=3 && det.every(function(s){return s.hits===0;})){
+      warn.style.display="block";
+      warn.innerHTML="ℹ️ Nelle ultime sessioni non risulta nessun suono percepito. Può dipendere da tante cose (volume, dispositivo, attenzione). <b>Vale la pena mostrare questo registro al tuo centro impianti / alla logopedista.</b>";
+    } else warn.style.display="none";
+  }
+  function exportCsv(){
+    var head="data;fase;prove;riuscite;falsiAllarmi;dettaglio;uscita;voce\n";
+    var rows=sessions.map(function(s){
+      return [s.t, PHASE_NAMES[s.phase]||s.phase, s.trials, s.hits, s.fa, (s.detail||""), s.out, s.voice]
+        .map(function(x){ return String(x).replace(/;/g,","); }).join(";");
+    }).join("\n");
+    var blob=new Blob([head+rows], {type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="mattywords-registro.csv";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  }
+
+  // ============================== ONBOARDING ==============================
+  function runOnboarding(){
+    var ob=$("obPanel"), title=$("obTitle"), opts=$("obOpts");
+    function step1(){
+      title.textContent="Chi si allena?";
+      opts.innerHTML="";
+      [{k:"bimbo",t:"🧒 Un bambino / una bambina",s:"Festeggiamenti e parole semplici"},
+       {k:"adulto",t:"🧑 Un adulto",s:"Stile sobrio, stesso percorso"}].forEach(function(o){
+        var b=document.createElement("button");
+        b.innerHTML=o.t+"<small>"+o.s+"</small>";
+        b.addEventListener("click", function(){ profile={type:o.k}; step2(); });
+        opts.appendChild(b);
+      });
+      ob.classList.add("show");
+    }
+    function step2(){
+      title.textContent="Da quanto è attivo l'impianto?";
+      opts.innerHTML="";
+      [{k:"nuovo",t:"🌱 Da poco (primi mesi)",s:"Si parte dall'inizio: accorgersi dei suoni"},
+       {k:"medio",t:"🌿 Da un po'",s:"Si parte dalla detezione fine"},
+       {k:"esperto",t:"🌳 Da tanto / non so",s:"Tutte le prime tappe aperte"}].forEach(function(o){
+        var b=document.createElement("button");
+        b.innerHTML=o.t+"<small>"+o.s+"</small>";
+        b.addEventListener("click", function(){
+          profile.stage=o.k;
+          saveJSON(LS.profile, profile);
+          if(o.k!=="nuovo") progress.unlocked.f1=true;
+          persistProgress();
+          ob.classList.remove("show");
+          showMap();
+        });
+        opts.appendChild(b);
+      });
+    }
+    step1();
+  }
+
+  // ============================== EVENTI ==============================
+  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(L) lingTouch(); });
   window.addEventListener("keydown", function(e){
-    var typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+    var typing=/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
     if(typing) return;
-    if(e.code==="Space"){ e.preventDefault(); play(); }
-    else if(e.key==="ArrowLeft"){ e.preventDefault(); step(-1); }
-    else if(e.key==="ArrowRight"){ e.preventDefault(); step(1); }
+    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(L) lingTouch(); }
   });
+  $("backMap").addEventListener("click", function(){ abortSession(); L=null; showMap(); });
+  $("phStart").addEventListener("click", startSession);
+  $("phLing").addEventListener("click", startLing);
 
-  // ---------- impostazioni ----------
+  // ============================== IMPOSTAZIONI ==============================
   var panel=$("panel");
-  function parsePhon(txt){
-    return txt.split("\n").map(function(l){return l.trim()}).filter(Boolean).map(function(l){
-      var p=l.split("|"); var lab=p[0].trim();
-      return {label:lab, say:(p[1]||p[0]).trim()};
-    });
-  }
   function openPanel(){
     $("rate").value=rate; $("rateVal").textContent=rate.toFixed(2)+"×";
     $("vol").value=volume; $("volVal").textContent=Math.round(volume*100)+"%";
     $("voiceSel").value=currentVoice;
-    $("phonText").value=phon.map(function(p){return p.label+" | "+p.say}).join("\n");
-    $("wordText").value=words.join("\n");
-    ensureAudio();      // il click sull'ingranaggio è un gesto: ok per audio/setSinkId
+    ensureAudio();
     setupSinkUI();
     updateOutputLabel();
+    renderRegistro();
     panel.classList.add("show");
   }
   $("gear").addEventListener("click", openPanel);
   $("close").addEventListener("click", function(){ panel.classList.remove("show"); });
   panel.addEventListener("click", function(e){ if(e.target===panel) panel.classList.remove("show"); });
+  $("rate").addEventListener("input", function(e){ rate=parseFloat(e.target.value); $("rateVal").textContent=rate.toFixed(2)+"×"; persistSettings(); });
+  $("vol").addEventListener("input", function(e){ ensureAudio(); setVolume(parseFloat(e.target.value)); $("volVal").textContent=Math.round(volume*100)+"%"; persistSettings(); });
+  $("voiceSel").addEventListener("change", function(e){ currentVoice=e.target.value; persistSettings(); engineText.textContent = cloudReady?("Voce: "+voiceShort(currentVoice)):"Voce del dispositivo"; });
+  $("regCsv").addEventListener("click", exportCsv);
+  $("obRedo").addEventListener("click", function(){ panel.classList.remove("show"); runOnboarding(); });
 
-  // librino "La scala dell'ascolto"
+  // librino
   var infoPanel=$("infoPanel");
   $("book").addEventListener("click", function(){ infoPanel.classList.add("show"); });
   $("infoClose").addEventListener("click", function(){ infoPanel.classList.remove("show"); });
   infoPanel.addEventListener("click", function(e){ if(e.target===infoPanel) infoPanel.classList.remove("show"); });
 
-  $("rate").addEventListener("input", function(e){ rate=parseFloat(e.target.value); $("rateVal").textContent=rate.toFixed(2)+"×"; });
-  $("vol").addEventListener("input", function(e){ ensureAudio(); setVolume(parseFloat(e.target.value)); $("volVal").textContent=Math.round(volume*100)+"%"; });
-  $("voiceSel").addEventListener("change", function(e){ currentVoice=e.target.value; });
-
-  // ---------- uscita audio (scelta del dispositivo di output) ----------
+  // ============================== USCITA AUDIO ==============================
   var SINK_SETSINK = !!(window.AudioContext && window.AudioContext.prototype && ("setSinkId" in window.AudioContext.prototype));
   var SINK_PICK    = !!(navigator.mediaDevices && navigator.mediaDevices.selectAudioOutput);
   var SINK_ENUM    = !!(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices);
@@ -871,10 +933,9 @@
     }catch(e){}
     sel.value=chosenSink||"";
   }
-  function refreshSinks(){ return fillSinkSelect($("sinkSel")); }
   function setupSinkUI(){
     var sel=$("sinkSel"), pick=$("sinkPick"), note=$("sinkNote"), cur=$("sinkCurrent"), air=$("sinkAir");
-    air.style.display = SINK_AIRPLAY ? "block" : "none";   // AirPlay = di fatto solo iOS/Safari
+    air.style.display = SINK_AIRPLAY ? "block" : "none";
     if(SINK_SETSINK){
       note.textContent="Dove far uscire il suono (altoparlante, cuffie, Bluetooth…).";
       if(SINK_PICK){
@@ -882,11 +943,9 @@
         cur.textContent = chosenSinkLabel ? ("Uscita attuale: "+chosenSinkLabel) : "";
       } else {
         pick.style.display="none"; sel.style.display="block";
-        if(SINK_ENUM) refreshSinks();
+        if(SINK_ENUM) fillSinkSelect(sel);
       }
     } else {
-      // iOS/Safari: niente setSinkId. L'uscita si sceglie con AirPlay (l'audio passa
-      // già dal "ponte") oppure dalle impostazioni di sistema.
       sel.style.display="none"; pick.style.display="none";
       note.innerHTML = SINK_AIRPLAY
         ? "Tocca <b>📡 AirPlay</b> e scegli dove far uscire il suono (altoparlante, Bluetooth…). In alternativa, dal sistema (Centro di Controllo / Bluetooth)."
@@ -908,20 +967,17 @@
       var ok=await applySink(chosenSink); persistSettings();
       $("sinkCurrent").textContent = ok ? ("Uscita attuale: "+chosenSinkLabel) : "⚠️ Non riesco a usare questo dispositivo.";
       updateOutputLabel();
-    }catch(e){ /* annullato dall'utente */ }
+    }catch(e){}
   });
-  // AirPlay / route picker (iOS): apre il selettore di sistema sull'elemento <audio>
-  // del ponte (l'audio dell'app ci passa già, quindi la scelta vale per tutto).
   $("sinkAir").addEventListener("click", function(){
     ensureAudio(); var el=ensureSinkEl();
     if(typeof el.webkitShowPlaybackTargetPicker!=="function"){ $("sinkCurrent").textContent="AirPlay non disponibile su questo browser."; return; }
     try{ el.webkitShowPlaybackTargetPicker(); }catch(e){}
   });
 
-  // ---------- riga informativa: uscita audio corrente (sempre visibile) ----------
   async function updateOutputLabel(){
     var el=$("outText"); if(!el) return;
-    if(!SINK_SETSINK){ el.textContent = SINK_AIRPLAY ? "uscita audio" : "gestita dal sistema"; return; }   // iOS: tocca = AirPlay
+    if(!SINK_SETSINK){ el.textContent = SINK_AIRPLAY ? "uscita audio" : "gestita dal sistema"; return; }
     if(chosenSink){ el.textContent = chosenSinkLabel || "dispositivo scelto"; return; }
     var name="predefinita del sistema";
     if(SINK_ENUM){
@@ -934,32 +990,28 @@
     }
     el.textContent=name;
   }
-  // Il badge in basso È il selettore d'uscita: comportamento adatto alla piattaforma.
   $("outBadge").addEventListener("click", async function(){
     ensureAudio();
     if(SINK_PICK){
-      // Chrome desktop: selettore nativo con i nomi dei dispositivi
       try{
         var info=await navigator.mediaDevices.selectAudioOutput();
         chosenSink=info.deviceId; chosenSinkLabel=info.label||"dispositivo scelto";
         await applySink(chosenSink); persistSettings(); updateOutputLabel();
-      }catch(e){ /* annullato */ }
+      }catch(e){}
       return;
     }
     if(!SINK_SETSINK && SINK_AIRPLAY){
-      // iPhone/iPad: apre direttamente il selettore AirPlay di sistema
       var el=ensureSinkEl();
       try{ el.webkitShowPlaybackTargetPicker(); }catch(e){}
       return;
     }
     if(SINK_SETSINK && SINK_ENUM){
-      // Edge & co.: tendina leggera al posto del badge
       var sel=$("outSelMain");
       await fillSinkSelect(sel);
       $("outBadge").style.display="none"; sel.style.display="inline-block"; sel.focus();
       return;
     }
-    openPanel(); // ultimo ripiego
+    openPanel();
   });
   $("outSelMain").addEventListener("change", async function(e){
     chosenSink=e.target.value; chosenSinkLabel=e.target.options[e.target.selectedIndex].text;
@@ -973,83 +1025,24 @@
     try{ navigator.mediaDevices.addEventListener("devicechange", updateOutputLabel); }catch(e){}
   }
 
-  $("save").addEventListener("click", function(){
-    var np=parsePhon($("phonText").value); if(np.length) phon=np;
-    var nw=$("wordText").value.split("\n").map(function(s){return s.trim()}).filter(Boolean); if(nw.length) words=nw;
-    // persisti tutto
-    persistSettings();
-    saveJSON(LS.phon, phon);
-    saveJSON(LS.words, words);
-    idx=0; panel.classList.remove("show"); render();
-    prewarmCurrent();
-  });
-
-  // ---------- pre-caricamento (partenza istantanea, in modo gentile) ----------
-  // Precarica solo una piccola finestra attorno all'elemento corrente, non tutta la
-  // lista, per non sovraccaricare Wikimedia (e gli URL restano salvati in localStorage).
-  var prewarmToken = 0;
-  async function prewarmCurrent(){
-    if(!audioCtx) return;
-    var myToken = ++prewarmToken;
-    if(mode==="word"){
-      var around = [words[idx], words[idx+1], words[idx-1]].filter(Boolean);
-      for(var i=0;i<around.length;i++){
-        if(myToken!==prewarmToken) return;
-        // risolve la lista delle voci umane e pre-decodifica la prima (se c'è)
-        try{ var l = await findHumanList(around[i]); if(l && l[0]) await bufferForUrl(l[0]); }catch(e){}
-      }
-    } else if(mode==="phon" && cloudReady){
-      var ps = [phon[idx], phon[idx+1]].filter(Boolean).map(function(p){return p.say});
-      for(var j=0;j<ps.length;j++){
-        if(myToken!==prewarmToken) return;
-        if(cache.has(cacheKey(ps[j],currentVoice,rate))) continue;
-        try{ await getBuffer(ps[j],currentVoice,rate); }catch(e){ return; }
-      }
-    }
-  }
-
-  // ---------- rilevamento engine ----------
-  // Le PAROLE usano registrazioni umane reali (Lingua Libre) quando disponibili.
-  // I FONEMI usano il TTS: cloud (Azure) se la chiave è configurata, altrimenti browser.
-  function updateEngineUI(){
-    if(cloudReady){
-      engineBox.innerHTML = "✅ Parole: <b>voci umane reali</b> (Lingua Libre) quando disponibili. Fonemi/sillabe: <b>voce neurale Microsoft</b> (gratis, nessuna chiave).";
-    } else {
-      engineBox.innerHTML = "🎙️ Parole: <b>voci umane reali</b> (Lingua Libre) quando disponibili, altrimenti voce del dispositivo. La voce neurale non è raggiungibile in questo momento.";
-    }
-    setEngine(cloudReady ? "cloud" : "device");
-  }
-  async function detectEngine(){
-    try{
-      var res = await fetch("/api/tts", {method:"GET"});
-      if(res.ok){ var j = await res.json(); cloudReady = !!j.configured; }
-    }catch(e){ cloudReady=false; }
-    updateEngineUI();
-    prewarmCurrent();
-  }
-
-  // ---------- avvio ----------
-  // Nota: l'AudioContext NON si crea qui, ma al primo tocco (ensureAudio nel gesto),
-  // perché iOS blocca l'audio dei contesti creati senza un'interazione dell'utente.
-  render();
+  // ============================== AVVIO ==============================
+  // L'AudioContext NON si crea qui ma al primo gesto (iOS).
   detectEngine();
   updateOutputLabel();
+  if(profile){ showMap(); } else { showMap(); runOnboarding(); }
 
   // ---------- avviso installazione PWA (Android/iOS) ----------
   (function(){
     var bar=$("installBar"), txt=$("installText"), btn=$("installBtn"), cls=$("installClose");
-    var DISMISS_KEY="aa.installDismissed.v1";
     var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone===true;
-    if(standalone) return;                                   // già installata
-    try{ if(localStorage.getItem(DISMISS_KEY)) return; }catch(e){}
+    if(standalone) return;
+    try{ if(localStorage.getItem(LS.installDismiss)) return; }catch(e){}
     var ua=navigator.userAgent||"";
     var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
     var isAndroid = /Android/.test(ua);
-    function dismiss(){ bar.hidden=true; try{ localStorage.setItem(DISMISS_KEY,"1"); }catch(e){} }
+    function dismiss(){ bar.hidden=true; try{ localStorage.setItem(LS.installDismiss,"1"); }catch(e){} }
     cls.addEventListener("click", dismiss);
-
     if(isAndroid){
-      // Android/Chrome: aspetta il prompt nativo e offri il pulsante "Installa"
       var deferred=null;
       window.addEventListener("beforeinstallprompt", function(e){
         e.preventDefault(); deferred=e;
@@ -1063,7 +1056,6 @@
       });
       window.addEventListener("appinstalled", function(){ bar.hidden=true; });
     } else if(isIOS){
-      // iOS: niente prompt automatico — istruzioni per Safari
       txt.innerHTML="Per installare l'app: tocca <b>Condividi</b> (riquadro con freccia ⬆️) e poi <b>«Aggiungi a schermata Home»</b>.";
       bar.hidden=false;
     }
