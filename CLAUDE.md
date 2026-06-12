@@ -61,6 +61,11 @@ Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO l
 - Audio: Web Audio (GainNode = volume ok su iOS; sblocco nel gesto; su iOS "ponte"
   MediaStream→`<audio>` per scegliere l'uscita con AirPlay). Selettore uscita nel
   badge in basso (Chrome: picker nativo; Edge: tendina; iOS: AirPlay).
+- **Normalizzazione (regola di tutta l'app)**: OGNI suono (toni, tamburo, fischio,
+  parole TTS) è generato/decodificato come buffer, normalizzato allo stesso livello
+  (`normGain`: RMS target 0.12 + tetto picco 0.97) e POI moltiplicato per il volume
+  dell'app (masterGain). Nessun suono più forte o più piano di un altro. I suoni sono
+  generati come buffer (`makeSine/makeDrum/makeWhistle`) e suonati con `playSound`.
 - Voci TTS con nomi Dragon Ball: Goku/Vegeta (maschili), Chichi/Laura (femminili).
 - **Registrazioni umane** (Lingua Libre/Wikimedia, CC-BY-SA) torneranno nelle fasi
   f2–f4 per le parole: il codice di ricerca/normalizzazione è in `VersioneUno`.

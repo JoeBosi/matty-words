@@ -484,6 +484,17 @@
     src.start(0);
   }
 
+  // ---- normalizzazione: tutti i suoni allo stesso livello prima del volume app ----
+  var TARGET_RMS = 0.12, PEAK_CEIL = 0.97;
+  var soundCache = new Map();
+  function normGain(buf){
+    var d=buf.getChannelData(0), peak=0, sum=0, n=d.length;
+    for(var i=0;i<n;i++){ var s=d[i]<0?-d[i]:d[i]; if(s>peak)peak=s; sum+=d[i]*d[i]; }
+    var rms=Math.sqrt(sum/n)||0.0001;
+    var g=Math.min(TARGET_RMS/rms, PEAK_CEIL/(peak||PEAK_CEIL));
+    return (!isFinite(g)||g<=0)?1:g;
+  }
+
   // ---- TTS cloud (Microsoft, /api/tts) con cache; ripiego voce del browser ----
   var cloudReady = false;
   var cache = new Map();
@@ -496,7 +507,7 @@
     if(!res.ok) throw new Error("tts http "+res.status);
     var arr = await res.arrayBuffer();
     var audioBuf = await audioCtx.decodeAudioData(arr);
-    var clip = { buffer:audioBuf, gain:1 };
+    var clip = { buffer:audioBuf, gain:normGain(audioBuf) };   // parole normalizzate come gli altri suoni
     cache.set(k, clip);
     return clip;
   }
@@ -540,62 +551,47 @@
 
   // ---- suoni sintetici (Fase 0/1): generati al volo, funzionano anche offline ----
   // Tutti passano dal masterGain (volume + uscita scelta). Ritornano la durata in ms.
-  function synthDrum(){
-    ensureAudio(); if(!audioCtx) return 0;
-    var dur=1.8, n=3;
-    for(var i=0;i<n;i++){
-      var t0=audioCtx.currentTime + i*0.6;
-      var len=Math.floor(audioCtx.sampleRate*0.35);
-      var buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
-      var d=buf.getChannelData(0);
-      for(var j=0;j<len;j++){ d[j]=(Math.random()*2-1)*Math.pow(1-j/len,2.2); }
-      var src=audioCtx.createBufferSource(); src.buffer=buf;
-      var f=audioCtx.createBiquadFilter(); f.type="lowpass"; f.frequency.value=180;
-      var g=audioCtx.createGain(); g.gain.value=1.6;
-      src.connect(f); f.connect(g); g.connect(masterGain);
-      src.start(t0);
-    }
-    return dur*1000;
+  // --- suoni generati come BUFFER + NORMALIZZAZIONE UNICA ---
+  // Regola di tutta l'app: ogni suono viene portato allo stesso livello (RMS) con tetto
+  // anti-distorsione, poi suonato attraverso il masterGain (= volume impostato nell'app).
+  // Così nessun suono è più forte o più piano di un altro.
+  var fadeMs=6;
+  function fadeEnds(d, sr){ var f=Math.floor(sr*fadeMs/1000); for(var i=0;i<f && i<d.length/2;i++){ var k=i/f; d[i]*=k; d[d.length-1-i]*=k; } }
+  function makeSine(freq, durSec){
+    var key="sine"+freq+"_"+durSec; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*durSec), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    for(var i=0;i<n;i++){ d[i]=Math.sin(2*Math.PI*freq*i/sr); }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
-  function synthWhistle(){
-    ensureAudio(); if(!audioCtx) return 0;
-    var dur=1.6, t0=audioCtx.currentTime;
-    var o=audioCtx.createOscillator(); o.type="sine"; o.frequency.value=1100;
-    var lfo=audioCtx.createOscillator(); lfo.frequency.value=6;
-    var lg=audioCtx.createGain(); lg.gain.value=40;
-    lfo.connect(lg); lg.connect(o.frequency);
-    var g=audioCtx.createGain();
-    g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(0.5,t0+0.06);
-    g.gain.setValueAtTime(0.5,t0+dur-0.12); g.gain.linearRampToValueAtTime(0,t0+dur);
-    o.connect(g); g.connect(masterGain);
-    o.start(t0); o.stop(t0+dur); lfo.start(t0); lfo.stop(t0+dur);
-    return dur*1000;
+  function makeDrum(){
+    var key="drum"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.8), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    for(var h=0;h<3;h++){ var t0=Math.floor(h*0.6*sr), L=Math.floor(sr*0.4);
+      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){ d[idx]+=Math.sin(2*Math.PI*100*t)*Math.exp(-t*11) + (Math.random()*2-1)*0.35*Math.exp(-t*30); } } }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
-  function synthTone(freq, durSec, gainVal){
-    ensureAudio(); if(!audioCtx) return 0;
-    var t0=audioCtx.currentTime;
-    var o=audioCtx.createOscillator(); o.type="sine"; o.frequency.value=freq;
-    var g=audioCtx.createGain();
-    g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(gainVal,t0+0.04);
-    g.gain.setValueAtTime(gainVal,t0+durSec-0.08); g.gain.linearRampToValueAtTime(0,t0+durSec);
-    o.connect(g); g.connect(masterGain);
-    o.start(t0); o.stop(t0+durSec);
-    return durSec*1000;
+  function makeWhistle(){
+    var key="whistle"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.6), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0), ph=0;
+    for(var i=0;i<n;i++){ var t=i/sr, f=1100+40*Math.sin(2*Math.PI*6*t); ph+=2*Math.PI*f/sr; d[i]=Math.sin(ph); }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
+  // Suona un buffer normalizzandolo. Ritorna la durata in ms.
+  function playSound(buf){ ensureAudio(); if(!buf) return 0; playBuffer(buf, null, (buf.__g!=null?buf.__g:normGain(buf))); return buf.duration*1000; }
 
   // ============================== DEFINIZIONE FASI ==============================
   // Suoni F0: salienti e lunghi. Suoni F1: brevi, più deboli, varie frequenze.
   var F0_SOUNDS = [
-    {name:"tamburo",  fire:function(){ return synthDrum(); }},
-    {name:"fischio",  fire:function(){ return synthWhistle(); }},
-    {name:"tono basso",fire:function(){ return synthTone(300, 1.6, 0.7); }}
+    {name:"tamburo",  fire:function(){ return playSound(makeDrum()); }},
+    {name:"fischio",  fire:function(){ return playSound(makeWhistle()); }},
+    {name:"tono basso",fire:function(){ return playSound(makeSine(300, 1.6)); }}
   ];
   var F1_SOUNDS = [
-    {name:"250 Hz",  fire:function(){ return synthTone(250, 0.7, 0.45); }},
-    {name:"500 Hz",  fire:function(){ return synthTone(500, 0.7, 0.4); }},
-    {name:"1 kHz",   fire:function(){ return synthTone(1000, 0.6, 0.35); }},
-    {name:"2 kHz",   fire:function(){ return synthTone(2000, 0.6, 0.3); }},
-    {name:"4 kHz",   fire:function(){ return synthTone(4000, 0.6, 0.3); }}
+    {name:"250 Hz",  fire:function(){ return playSound(makeSine(250, 0.7)); }},
+    {name:"500 Hz",  fire:function(){ return playSound(makeSine(500, 0.7)); }},
+    {name:"1 kHz",   fire:function(){ return playSound(makeSine(1000, 0.7)); }},
+    {name:"2 kHz",   fire:function(){ return playSound(makeSine(2000, 0.7)); }},
+    {name:"4 kHz",   fire:function(){ return playSound(makeSine(4000, 0.7)); }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -841,7 +837,7 @@
     if(B && (B.state==="waiting"||B.state==="sounding"||B.state==="catch")){ bandTouch(); return; }
     ensureAudio();
     stopCurrent();
-    synthTone(BANDS[i].f, 0.8, 0.4);
+    playSound(makeSine(BANDS[i].f, 0.8));
     bar.classList.add("active");
     setTimeout(function(){ bar.classList.remove("active"); }, 900);
   }
@@ -890,7 +886,7 @@
       if(!B || B.state!=="waiting") return;
       if(tr.sound){
         B.state="sounding"; renderSpectrum();
-        synthTone(BANDS[tr.b].f, 0.7, 0.4);
+        playSound(makeSine(BANDS[tr.b].f, 0.7));
         later(function(){ if(B && B.state==="sounding"){ B.idx++; bandFeedback("💤"); } }, 700+1500);
       } else {
         B.state="catch"; renderSpectrum();
