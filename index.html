@@ -172,6 +172,11 @@
   .rate-val,.vol-val{font-weight:600;color:var(--wait)}
   .enginebox{font-size:.82rem;color:var(--muted);background:var(--idle-soft);border-radius:12px;padding:.6rem .7rem;margin-bottom:1.1rem;line-height:1.4}
   .card .save{width:100%;border:0;background:var(--wait);color:#fff;border-radius:14px;padding:.9rem;font-weight:600;font-size:1rem;cursor:pointer;font-family:'Fredoka'}
+  .info-body{font-size:.94rem;line-height:1.55;color:var(--ink)}
+  .info-body ol{padding-left:1.2rem;margin:.6rem 0}
+  .info-body li{margin-bottom:.65rem}
+  .info-body li::marker{font-weight:700;color:var(--wait)}
+  .info-note{background:var(--idle-soft);border-radius:12px;padding:.7rem .9rem;font-size:.84rem;color:var(--muted)}
   .card .close{float:right;border:0;background:transparent;font-size:1.4rem;cursor:pointer;color:var(--muted);line-height:1}
 </style>
 </head>
@@ -194,6 +199,7 @@
     <button class="tab" role="tab" aria-selected="false" data-mode="word">Parole</button>
     <button class="tab" role="tab" aria-selected="false" data-mode="say">Dì una parola</button>
   </div>
+  <button class="gear" id="book" title="La scala dell'ascolto" aria-label="Guida">📖</button>
   <button class="gear" id="gear" title="Impostazioni" aria-label="Impostazioni">⚙</button>
 </header>
 
@@ -234,6 +240,40 @@
     <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
   </div>
 </main>
+
+<!-- librino: la scala dell'ascolto -->
+<div class="panel" id="infoPanel">
+  <div class="card">
+    <button class="close" id="infoClose">×</button>
+    <h2>📖 La scala dell'ascolto</h2>
+    <div class="info-body">
+      <p>La riabilitazione uditiva segue una gerarchia classica (<b>Erber</b>), come dei
+      <b>livelli di gioco</b>: si sale un gradino alla volta.</p>
+
+      <ol>
+        <li><b>Detezione</b> — «c'è suono o non c'è?» Il bambino segnala quando sente
+        qualcosa. Qui rientra il controllo quotidiano dei <b>6 suoni di Ling</b>
+        (<i>m&nbsp;·&nbsp;u&nbsp;·&nbsp;a&nbsp;·&nbsp;i&nbsp;·&nbsp;sc&nbsp;·&nbsp;s</i>), che i logopedisti
+        usano per verificare che l'impianto copra tutte le frequenze.</li>
+        <li><b>Discriminazione</b> — «questi due suoni sono uguali o diversi?» Non serve
+        capire <i>cosa</i> sono: basta distinguerli (palla/balla, lungo/corto, forte/piano).</li>
+        <li><b>Identificazione</b> — sente una parola e la <b>indica tra alternative</b>:
+        2–4 figure o parole sullo schermo, parte l'audio, il bambino tocca quella giusta.
+        È il formato d'oro per un bambino: misurabile, giocabile, e con le immagini non
+        serve saper leggere.</li>
+        <li><b>Comprensione</b> — domande, frasi, ordini semplici («tocca il naso»),
+        ascolto nel rumore.</li>
+      </ol>
+
+      <p>Ogni esercizio dell'app appartiene a uno di questi gradini: l'obiettivo è
+      salire la scala, dal sentire al <b>capire</b>.</p>
+
+      <p class="info-note">⚠️ Questa app <b>non è un dispositivo medico</b>: è un supporto
+      per l'allenamento. Il percorso e le liste andrebbero condivisi con la propria
+      logopedista / il proprio audiologo.</p>
+    </div>
+  </div>
+</div>
 
 <!-- impostazioni -->
 <div class="panel" id="panel">
@@ -795,6 +835,12 @@
   $("gear").addEventListener("click", openPanel);
   $("close").addEventListener("click", function(){ panel.classList.remove("show"); });
   panel.addEventListener("click", function(e){ if(e.target===panel) panel.classList.remove("show"); });
+
+  // librino "La scala dell'ascolto"
+  var infoPanel=$("infoPanel");
+  $("book").addEventListener("click", function(){ infoPanel.classList.add("show"); });
+  $("infoClose").addEventListener("click", function(){ infoPanel.classList.remove("show"); });
+  infoPanel.addEventListener("click", function(e){ if(e.target===infoPanel) infoPanel.classList.remove("show"); });
 
   $("rate").addEventListener("input", function(e){ rate=parseFloat(e.target.value); $("rateVal").textContent=rate.toFixed(2)+"×"; });
   $("vol").addEventListener("input", function(e){ ensureAudio(); setVolume(parseFloat(e.target.value)); $("volVal").textContent=Math.round(volume*100)+"%"; });
