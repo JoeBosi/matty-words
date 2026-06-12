@@ -116,9 +116,12 @@ Nessuna.
 ## Backlog
 - [x] f2 Uguali/Diversi, f3 Indicalo!, f4 Scrivilo!, f5 Capiscilo!: FATTE (tutte le tappe attive).
 - [x] Palestra (ascolto libero con liste editabili) e Album figurine: FATTI.
-- [ ] Difficoltà adattiva (ripeti gli errori, sali sopra l'80%).
-- [ ] Grafico dei progressi nel registro (oltre al CSV).
-- [ ] Somiglianza acustica crescente nei distrattori di f3 (ora sono casuali).
+- [x] Difficoltà adattiva (f3/f4): coda errori `aa.err.v1`, le parole sbagliate tornano
+      ~50% delle volte finché non vengono recuperate (errAdd/errSub/pickTarget).
+- [x] Grafico dei progressi in ⚙ → Registro: barrette per tappa, ultime 12 sessioni
+      (renderRegChart; colori: ≥65% teal, ≥40% arancio).
+- [x] Distrattori di f3 per somiglianza acustica (simScore: iniziale, rima, lunghezza,
+      vocali): prove 1–3 distrattori dissimili, 8–10 i più simili al bersaglio.
 - [ ] Modalità confronto microfono vs streaming Bluetooth (stesso esercizio, registri separati).
 
 ## Contesto

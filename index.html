@@ -208,6 +208,16 @@
   .reglist{font-size:.82rem;line-height:1.5;background:var(--idle-soft);border-radius:12px;padding:.7rem .9rem;margin-bottom:.6rem;max-height:160px;overflow:auto}
   .regwarn{background:#FCEAE0;border-radius:12px;padding:.7rem .9rem;font-size:.84rem;color:#8a4a22;margin-bottom:.6rem}
 
+  /* grafico progressi: una riga di barrette per tappa (ultime sessioni) */
+  .regchart{display:none;margin:.2rem 0 .7rem}
+  .crow{display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem}
+  .clab{font-size:1rem;width:1.5rem;text-align:center;flex:none}
+  .cbars{flex:1;display:flex;align-items:flex-end;gap:2px;height:34px;background:var(--idle-soft);border-radius:8px;padding:3px}
+  .cbars i{flex:1;max-width:14px;border-radius:3px;background:#C9D6D2;min-height:3px}
+  .cbars i.mid{background:var(--play)}
+  .cbars i.hi{background:var(--wait)}
+  .cpct{font-size:.72rem;color:var(--muted);font-weight:600;width:2.4rem;text-align:right;flex:none}
+
   /* riga strumenti sotto la mappa */
   .toolrow{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.4rem}
   .toolrow .toolbtn{margin:0}
@@ -427,6 +437,7 @@
       <label>Registro delle sessioni</label>
       <small>Da mostrare alla logopedista. Confrontabile solo a parità di dispositivo, volume e uscita.</small>
       <div class="regwarn" id="regWarn" style="display:none"></div>
+      <div class="regchart" id="regChart"></div>
       <div class="reglist" id="regList">Nessuna sessione ancora.</div>
       <button class="ghostbtn" id="regCsv" type="button">⬇️ Scarica registro (CSV)</button>
     </div>
@@ -439,7 +450,7 @@
 
   // ============================== STATO E STORAGE ==============================
   var LS = { settings:"aa.settings.v1", progress:"aa.progress.v1", sessions:"aa.sessions.v1",
-             phon:"aa.phon.v1", words:"aa.words.v1", album:"aa.album.v1",
+             phon:"aa.phon.v1", words:"aa.words.v1", album:"aa.album.v1", err:"aa.err.v1",
              installDismiss:"aa.installDismissed.v1" };
   function loadJSON(key, def){ try{ var v=localStorage.getItem(key); return v? JSON.parse(v) : def; }catch(e){ return def; } }
   function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
@@ -1172,6 +1183,32 @@
   var I3=null;
   var cardsRow=$("cardsRow");
   function shuffled(arr){ return arr.slice().sort(function(){return Math.random()-0.5;}); }
+
+  // ---- difficoltà adattiva: le parole sbagliate tornano più spesso ----
+  var errWords = loadJSON(LS.err, {});           // parola -> n. errori da recuperare
+  function persistErr(){ saveJSON(LS.err, errWords); }
+  function errAdd(w){ errWords[w]=(errWords[w]||0)+1; persistErr(); }
+  function errSub(w){ if(errWords[w]){ errWords[w]--; if(!errWords[w]) delete errWords[w]; persistErr(); } }
+  // Sceglie la parola bersaglio: ~50% delle volte ripesca una parola sbagliata in passato.
+  function pickTarget(list, avoidW){
+    var pool=list.filter(function(x){ return x.w!==avoidW; });
+    if(!pool.length) pool=list;
+    var toFix=pool.filter(function(x){ return errWords[x.w]>0; });
+    if(toFix.length && Math.random()<0.5) return toFix[Math.floor(Math.random()*toFix.length)];
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  // ---- somiglianza acustica tra parole (per scegliere i distrattori di f3) ----
+  // Punteggio: stessa iniziale, stessa rima, stessa lunghezza, stesse vocali.
+  function vowels(w){ return normWord(w).replace(/[^aeiou]/g,""); }
+  function simScore(a,b){
+    var na=normWord(a), nb=normWord(b), s=0;
+    if(na[0]===nb[0]) s+=2;
+    if(na.slice(-2)===nb.slice(-2)) s+=2; else if(na.slice(-1)===nb.slice(-1)) s+=1;
+    if(Math.abs(na.length-nb.length)<=1) s+=1;
+    if(vowels(na)===vowels(nb)) s+=2;
+    return s;
+  }
   function startF3(){
     ensureAudio();
     var p=curPhase; if(!p) return;
@@ -1189,8 +1226,19 @@
     phTrial.textContent="Prova "+I3.n+" di "+I3.total;
     phEmo.style.display="none";
     var nCards = I3.n<=3 ? 2 : I3.n<=7 ? 3 : 4;
-    var pick = shuffled(wordsWithEmoji()).slice(0,nCards);
-    I3.target = pick[Math.floor(Math.random()*pick.length)];
+    var bank = wordsWithEmoji();
+    // bersaglio: adattivo (ripesca gli errori), mai uguale alla prova precedente
+    I3.target = pickTarget(bank, I3.target && I3.target.w);
+    var target = I3.target;
+    // distrattori per somiglianza acustica: prime prove = molto diversi (facile),
+    // ultime prove = i più simili al bersaglio (difficile)
+    var others = bank.filter(function(x){ return x.w!==target.w; })
+                     .sort(function(a,b){ return simScore(b.w,target.w)-simScore(a.w,target.w); });
+    var need = nCards-1, dis;
+    if(I3.n<=3)      dis = shuffled(others.slice(-Math.max(need*2,4))).slice(0,need);  // tra i meno simili
+    else if(I3.n<=7) dis = shuffled(others).slice(0,need);                              // misti
+    else             dis = shuffled(others.slice(0, Math.max(need*2,4))).slice(0,need); // tra i più simili
+    var pick = shuffled([target].concat(dis));
     cardsRow.innerHTML = pick.map(function(x){
       return '<button class="cardbtn" data-w="'+x.w+'" aria-label="'+x.w+'">'+x.e+'</button>';
     }).join("");
@@ -1215,12 +1263,14 @@
     var msg;
     if(correct){
       I3.ok++;
+      errSub(w);   // parola recuperata: esce (gradualmente) dalla coda degli errori
       album.wprog[w]=(album.wprog[w]||0)+1; persistAlbum();
       var won = album.wprog[w]>=3 && albumSet("words", w, 1);
       msg = won ? ("✨ La carta di «"+w.toUpperCase()+"» è tua!") : ("Giusto! Era "+I3.target.e+" "+w);
       if(won) confettiBurst(false);
       setStatus("wait", msg, "🎉");
     } else {
+      errAdd(I3.target.w);   // tornerà più spesso finché non la riconosci
       setStatus("", "Era "+I3.target.e+" «"+I3.target.w+"»", "🙈");
     }
     later(f3Next, 1500);
@@ -1246,7 +1296,7 @@
   // (maiuscole, accenti, 1 lettera di differenza nelle parole lunghe).
   var W4=null;
   var typeRow=$("typeRow"), typeInput=$("typeInput");
-  function normWord(s){ return String(s||"").toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+  function normWord(s){ return String(s||"").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
   function levDist(a,b){
     if(Math.abs(a.length-b.length)>1) return 9;
     var prev=[], cur=[];
@@ -1281,9 +1331,7 @@
     W4.n++;
     phTrial.textContent="Prova "+W4.n+" di "+W4.total;
     phEmo.style.display=""; showListen();
-    var prevW = W4.target && W4.target.w;
-    var cand = wordList.filter(function(x){ return x.w!==prevW; });
-    W4.target = cand[Math.floor(Math.random()*cand.length)] || wordList[0];
+    W4.target = pickTarget(wordList, W4.target && W4.target.w);  // adattivo: ripesca gli errori
     typeInput.value="";
     typeRow.style.display="flex";
     W4.state="answer";
@@ -1300,6 +1348,7 @@
     var t=W4.target, correct=wordsMatch(typed, t.w);
     if(correct){
       W4.ok++;
+      errSub(t.w);
       var lvl = (album.words[t.w]||0)>=1 ? 2 : 1;
       var up = albumSet("words", t.w, lvl);
       var gold = up && lvl===2;
@@ -1307,6 +1356,7 @@
       setStatus("wait", gold ? ("🌟 La carta di «"+t.w.toUpperCase()+"» è DORATA!") : ("Giusto! Era «"+t.w+"»"), gold?"🌟":"🎉");
       if(gold) confettiBurst(false);
     } else {
+      errAdd(t.w);
       showEmo("🙈");
       setStatus("", "Era «"+t.w+"» (hai scritto: "+typed+")", "🙈");
     }
@@ -1631,6 +1681,29 @@
       warn.style.display="block";
       warn.innerHTML="ℹ️ Nelle ultime sessioni non risulta nessun suono percepito. Può dipendere da tante cose (volume, dispositivo, attenzione). <b>Vale la pena mostrare questo registro al tuo centro impianti / alla logopedista.</b>";
     } else warn.style.display="none";
+    renderRegChart();
+  }
+  // Grafico progressi: per ogni tappa una riga di barrette (% riuscite, ultime 12 sessioni).
+  function renderRegChart(){
+    var chart=$("regChart");
+    var per={};
+    sessions.forEach(function(s){
+      if(/^f[0-5]$/.test(s.phase)||s.phase==="ling"){ var id=(s.phase==="ling"?"f1":s.phase); (per[id]=per[id]||[]).push(s); }
+    });
+    var ids=Object.keys(per).sort();
+    if(!ids.length){ chart.style.display="none"; chart.innerHTML=""; return; }
+    chart.innerHTML = ids.map(function(id){
+      var ss=per[id].slice(-12);
+      var bars=ss.map(function(s){
+        var pct=s.trials? s.hits/s.trials : 0;
+        var cls=pct>=0.65?" class=\"hi\"":pct>=0.4?" class=\"mid\"":"";
+        return "<i"+cls+" style=\"height:"+Math.max(8,Math.round(pct*100))+"%\" title=\""+s.hits+"/"+s.trials+"\"></i>";
+      }).join("");
+      var last=ss[ss.length-1], lp=last.trials?Math.round(100*last.hits/last.trials):0;
+      var ph=phaseById(id);
+      return '<div class="crow"><span class="clab" title="'+(ph?ph.label:id)+'">'+(ph?ph.emoji:id)+'</span><div class="cbars">'+bars+'</div><span class="cpct">'+lp+'%</span></div>';
+    }).join("");
+    chart.style.display="block";
   }
   function exportCsv(){
     var head="data;fase;prove;riuscite;falsiAllarmi;dettaglio;uscita;voce\n";
