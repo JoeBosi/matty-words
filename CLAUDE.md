@@ -21,13 +21,17 @@ Profilo iniziale al primo avvio: bimbo/adulto + da quanto è attivo l'impianto
    20% prove "trabocchetto" (silenzio: successo = non toccare). 10 prove.
    Include il **Check di Ling** (m·u·a·i·sc·s pronunciati dalla voce TTS; registra
    quali frequenze sono percepite). ATTIVA.
-3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — coppie minime e soprasegmentali. IN ARRIVO.
+3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — si ascoltano due stimoli di fila e
+   si risponde UGUALI/DIVERSI (pulsanti nella barra comandi). Mix di soprasegmentali
+   (toni sintetici: lunghezza, altezza, numero di colpi) e coppie minime di parole TTS
+   (pane/cane, palla/balla, riso/viso, sale/sole, topo/capo). Tocco sul palco = riascolta
+   la coppia. 10 prove. f1 con ≥2⭐ sblocca f2. ATTIVA.
 4. **f3 — 👉 Indicalo!** (identificazione) — 2–4 carte con figure (emoji), tocca quella giusta. IN ARRIVO.
 5. **f4 — 🗣️ Ripeti!** (produzione) — normale (parola a schermo) e difficile (solo audio,
    open-set); il microfono trascrive ma **l'adulto è il giudice** (✓/✗). IN ARRIVO.
 6. **f5 — 🧠 Capiscilo!** (comprensione) — ordini eseguibili, ascolto nel rumore. IN ARRIVO.
 
-Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); f0 con ≥2⭐ sblocca f1.
+Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); f0 con ≥2⭐ sblocca f1, f1 con ≥2⭐ sblocca f2.
 Mascotte: il logo Matty (SVG) che "respira" durante l'attesa; emoji per i feedback
 (🎉 sentito · 🙈 falso allarme · 💤 mancato · 🤫 trabocchetto superato · 🏆 traguardo).
 
@@ -81,7 +85,7 @@ Nessuna.
 - `main` = versione 2 (percorso). - `VersioneUno` = vecchia app a 3 modalità (stabile).
 
 ## Backlog
-- [ ] f2 Uguali/Diversi (coppie minime per contrasto, soprasegmentali).
+- [x] f2 Uguali/Diversi (coppie minime per contrasto, soprasegmentali). FATTA.
 - [ ] f3 Indicalo! (carte emoji, 2→4 alternative, somiglianza acustica crescente).
 - [ ] f4 Ripeti! (mic + adulto-giudice). f5 Capiscilo! (ordini, rumore graduale).
 - [ ] Difficoltà adattiva (ripeti gli errori, sali sopra l'80%).

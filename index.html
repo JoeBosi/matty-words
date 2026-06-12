@@ -257,6 +257,8 @@
     <button class="nav" id="backMap">‹ Mappa</button>
     <button class="act" id="phStart">Inizia</button>
     <button class="act secondary" id="phLing" style="display:none">Check di Ling</button>
+    <button class="act secondary" id="ansSame" style="display:none">🟰 Uguali</button>
+    <button class="act" id="ansDiff" style="display:none">↔️ Diversi</button>
   </div>
 
   <div class="installbar" id="installBar" hidden>
@@ -602,7 +604,7 @@
   var PHASES = [
     { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono. Niente fretta: i suoni arrivano quando meno te lo aspetti.", trials:8,  sounds:F0_SOUNDS, catchRate:0,   ling:false },
     { id:"f1", emoji:"🎵", label:"Lo senti?",      sub:"Suoni più brevi e leggeri. Tocca solo quando senti davvero qualcosa!", trials:10, sounds:F1_SOUNDS, catchRate:0.2, ling:true },
-    { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", locked:true },
+    { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", sub:"Ascolti due suoni di fila: erano uguali o diversi? Tocca lo schermo per riascoltarli.", trials:10, kind:"discr" },
     { id:"f3", emoji:"👉", label:"Indicalo!",          locked:true },
     { id:"f4", emoji:"🗣️", label:"Ripeti!",            locked:true },
     { id:"f5", emoji:"🧠", label:"Capiscilo!",          locked:true }
@@ -660,7 +662,9 @@
     phTrial.textContent = "";
     phEmo.style.display=""; showListen();
     lingRow.style.display="none";
+    $("ansSame").style.display="none"; $("ansDiff").style.display="none";
     $("spectrum").style.display="none";
+    $("phStart").style.display="flex";
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia";
     $("phLing").style.display = p.ling ? "flex" : "none";
     stage.classList.remove("touchable");
@@ -677,7 +681,7 @@
   var timers = [];
   function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
-  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; if(MS) MS.running=false; MS=null; document.body.removeAttribute("data-trial"); }
+  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; if(MS) MS.running=false; MS=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
 
   function startSession(){
     ensureAudio();
@@ -741,6 +745,7 @@
     if(st>prev) progress.stars[p.id]=st;
     // sblocco della tappa successiva con almeno 2 stelle
     if(p.id==="f0" && st>=2) progress.unlocked.f1=true;
+    if(p.id==="f1" && st>=2) progress.unlocked.f2=true;
     persistProgress();
     saveSession({ phase:p.id, trials:total, hits:S.hits, fa:S.fa, detail:"catch "+S.catchOk+"/"+S.catchN });
     showEmo(st>=2 ? "🏆" : "🏁");
@@ -751,6 +756,132 @@
     S=null;
     $("phStart").disabled=false; $("phStart").textContent="Ancora";
     if(curPhase && curPhase.ling) $("phLing").style.display="flex";
+  }
+
+  // ============================== MOTORE DISCRIMINAZIONE (f2: «Uguali o diversi?») ==============================
+  // Si ascoltano due stimoli di fila; l'utente decide se sono UGUALI o DIVERSI.
+  // Mix di contrasti soprasegmentali (toni sintetici: lunghezza, altezza, numero) e
+  // coppie minime di parole (TTS). Qui mostrare che il suono sta suonando è VOLUTO:
+  // il compito è confrontare, non rilevare la presenza.
+  var D = null;
+  // Mostra/nasconde i pulsanti risposta (nella barra comandi) e il pulsante Inizia.
+  function f2ShowAnswers(show){
+    $("ansSame").style.display = show ? "flex" : "none";
+    $("ansDiff").style.display = show ? "flex" : "none";
+    $("phStart").style.display = show ? "none" : "flex";
+  }
+  // Ogni "stimolo" è una funzione(after) che lo suona e chiama after() alla fine.
+  function stimTone(freq, durSec){ return function(after){ var b=makeSine(freq, durSec); playBuffer(b, after, b.__g); }; }
+  function stimBeats(nBeats){
+    return function(after){
+      var b = makeSine(700, 0.16);
+      var i = 0;
+      (function step(){
+        if(!D){ return; }
+        if(i>=nBeats){ if(after) later(after, 80); return; }
+        i++; playBuffer(b, function(){ later(step, 130); }, b.__g);
+      })();
+    };
+  }
+  function stimWord(w){ return function(after){ speakDetect(w, after); }; }
+  var F2_ITEMS = [
+    // soprasegmentali (sempre disponibili, anche offline)
+    { kind:"lunghezza", a:stimTone(500, 0.30), b:stimTone(500, 1.20) },
+    { kind:"altezza",   a:stimTone(300, 0.70), b:stimTone(1100, 0.70) },
+    { kind:"numero",    a:stimBeats(1),        b:stimBeats(2) },
+    // coppie minime di parole (TTS): differiscono per un solo suono
+    { kind:"parola", a:stimWord("pane"),  b:stimWord("cane") },
+    { kind:"parola", a:stimWord("palla"), b:stimWord("balla") },
+    { kind:"parola", a:stimWord("riso"),  b:stimWord("viso") },
+    { kind:"parola", a:stimWord("sale"),  b:stimWord("sole") },
+    { kind:"parola", a:stimWord("topo"),  b:stimWord("capo") }
+  ];
+
+  // Pre-scarica in background le parole (coppie minime) così la coppia parte subito.
+  var F2_WORDS = ["pane","cane","palla","balla","riso","viso","sale","sole","topo","capo"];
+  function f2Prewarm(){
+    if(!cloudReady || !audioCtx) return;
+    F2_WORDS.forEach(function(w){ getBuffer(w, currentVoice, rate).catch(function(){}); });
+  }
+  function startF2(){
+    ensureAudio();
+    var p=curPhase; if(!p) return;
+    f2Prewarm();
+    D = { phase:p, n:0, ok:0, total:p.trials, truthSame:false, state:"idle", s1:null, s2:null };
+    $("phStart").disabled=true; $("phStart").textContent="In corso…";
+    f2ShowAnswers(false);
+    stage.classList.add("touchable");
+    showListen();
+    setStatus("wait","Ascolta i due suoni…","🎧");
+    f2Next();
+  }
+  function f2Next(){
+    if(!D) return;
+    if(D.n >= D.total){ f2Finish(); return; }
+    D.n++;
+    phTrial.textContent = "Prova "+D.n+" di "+D.total;
+    f2ShowAnswers(false);
+    showListen();
+    setStatus("wait","Ascolta i due suoni…","🎧");
+    var it = F2_ITEMS[Math.floor(Math.random()*F2_ITEMS.length)];
+    D.truthSame = Math.random() < 0.5;
+    var firstA = Math.random() < 0.5;
+    D.s1 = firstA ? it.a : it.b;
+    D.s2 = D.truthSame ? D.s1 : (firstA ? it.b : it.a);
+    later(f2PlayPair, 700);
+  }
+  function f2PlayPair(){
+    if(!D || !D.s1) return;
+    D.state="playing";
+    f2ShowAnswers(false);
+    showEmo("🔊");
+    setStatus("play","Ascolta…","🔊");
+    D.s1(function(){
+      if(!D) return;
+      later(function(){
+        if(!D) return;
+        D.s2(function(){
+          if(!D) return;
+          showListen();
+          f2EnableAnswers();
+        });
+      }, 600);
+    });
+  }
+  function f2EnableAnswers(){
+    if(!D) return;
+    D.state="answer";
+    f2ShowAnswers(true);
+    setStatus("wait","Erano uguali o diversi?  (tocca lo schermo per risentire)","👂");
+  }
+  function f2Replay(){
+    if(!D) return;
+    if(D.state==="answer"){ f2PlayPair(); }  // riascolta la coppia
+  }
+  function f2Answer(saidSame){
+    if(!D || D.state!=="answer") return;
+    D.state="feedback";
+    clearTimers(); stopCurrent();
+    var correct = (saidSame === D.truthSame);
+    if(correct) D.ok++;
+    f2ShowAnswers(false);
+    showEmo(correct ? "🎉" : "🙈");
+    setStatus(correct?"wait":"", correct ? "Esatto!" : ("Erano "+(D.truthSame?"uguali":"diversi")), correct?"🎉":"🙈");
+    later(f2Next, 1200);
+  }
+  function f2Finish(){
+    var p=D.phase, total=D.total, good=D.ok, score=total?good/total:0, st=starsFor(score);
+    var prev=progress.stars[p.id]||0; if(st>prev) progress.stars[p.id]=st;
+    if(p.id==="f2" && st>=2) progress.unlocked.f3=true; // pronto per quando f3 esisterà
+    persistProgress();
+    saveSession({ phase:p.id, trials:total, hits:good, fa:total-good, detail:"discriminazione "+good+"/"+total });
+    showEmo(st>=2 ? "🏆" : "🏁");
+    phTrial.textContent = "";
+    f2ShowAnswers(false);
+    setStatus(st>=1?"wait":"", "Finito! "+good+" su "+total+"  "+starsStr(st), st>=2?"🏆":"🏁");
+    stage.classList.remove("touchable");
+    D=null;
+    $("phStart").disabled=false; $("phStart").textContent="Ancora";
   }
 
   // ---- Check di Ling (detezione dei 6 suoni parlati) ----
@@ -1062,20 +1193,23 @@
   }
 
   // ============================== EVENTI ==============================
-  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); });
+  stage.addEventListener("click", function(){ if(S) onStageTouch(); else if(D) f2Replay(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); });
   window.addEventListener("keydown", function(e){
     var typing=/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
     if(typing) return;
-    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); }
+    if(e.code==="Space"){ e.preventDefault(); if(S) onStageTouch(); else if(D) f2Replay(); else if(L) lingTouch(); else if(B) bandTouch(); else if(MS && MS.running) msReact(); }
   });
   var bandMode=false;
   $("backMap").addEventListener("click", function(){ abortSession(); L=null; B=null; MS=null; bandMode=false; msMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; showMap(); });
   $("phStart").addEventListener("click", function(){
     if(msMode){ if(MS && MS.running) finishMiSenti(); else startMiSenti(); }
     else if(bandMode) startBandTest();
+    else if(curPhase && curPhase.kind==="discr") startF2();
     else startSession();
   });
   $("phLing").addEventListener("click", function(){ if(msMode) msReact(); else startLing(); });
+  $("ansSame").addEventListener("click", function(){ f2Answer(true); });
+  $("ansDiff").addEventListener("click", function(){ f2Answer(false); });
   $("bandBtn").addEventListener("click", function(){ bandMode=true; openBandTest(); });
   $("msBtn").addEventListener("click", openMiSenti);
 
