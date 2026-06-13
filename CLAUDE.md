@@ -20,10 +20,13 @@ e l'ascolto nel rumore. Nessuna distinzione di età: un'unica app uguale per tut
 L'app è una **mappa di gioco** (una sola schermata, niente scroll) con 6 tappe.
 Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
 
-1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni sintetici **lunghi e continui**
-   (~2,6s: mucca 🐮, clacson 🚗, campanello 🔔, tamburo-rullo 🥁, uccellini 🐦, fischio 🎶
-   — Web Audio, offline). Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti,
-   non colpi secchi; finestra per rispondere ampia (durata + 2,8s). Tocca quando senti →
+1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni **REALI** (registrazioni vere
+   CC da Wikimedia, ~2–3s in `sounds/*.mp3`: mucca 🐮, clacson 🚗, campanello 🔔,
+   tamburo 🥁, uccellini 🐦, fischio 🎶; crediti in `sounds/CREDITS.md`). Decodificati e
+   normalizzati nella STESSA pipeline degli altri suoni; sintetici (make*) come fallback
+   se il file non è ancora in cache. Caricati in cache PWA + preload all'avvio sessione.
+   Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti, non colpi secchi; finestra
+   per rispondere ampia (durata + 2,8s). Tocca quando senti →
    si RIVELA chi era e vinci la **figurina**. 8 prove.
 2. **f1 — 🎵 Check di Ling** (detezione) — SOLO i 6 suoni di Ling (m·u·a·i·sc·s, voce
    TTS): tocca quando senti la voce. Stelle in base ai sentiti/6.
@@ -39,8 +42,9 @@ Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
    dall'app: «tocca il gatto», «… e poi il sole». Difficoltà = lunghezza frase (1→3
    elementi), mai il rumore. 8 prove.
 
-Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐); ogni tappa con ≥2⭐ sblocca la successiva
-(f0→f1→f2→f3→f4→f5). Coriandoli (confettiBurst) a fine sessione con ≥2⭐.
+Stelle per tappa (≥85%=3⭐, ≥65%=2⭐, ≥40%=1⭐) come **traccia dei progressi**.
+**Tutte le tappe sono SEMPRE accessibili** (nessun lucchetto): chi si allena sceglie da
+dove partire (`isUnlocked` ritorna sempre vero). Coriandoli (confettiBurst) a fine sessione con ≥2⭐.
 Mascotte: il logo Matty (SVG) che "respira" durante l'attesa.
 
 ## Gamification: l'Album di Matty (📒 sulla mappa)

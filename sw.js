@@ -5,7 +5,7 @@
 // - NON intercetta le richieste POST (es. /api/tts): vanno sempre in rete; se offline,
 //   l'app ripiega da sola sulla voce del dispositivo.
 
-const VERSION = "v23";
+const VERSION = "v24";
 const SHELL = "shell-" + VERSION;
 const RUNTIME = "runtime-" + VERSION;
 
@@ -17,6 +17,13 @@ const SHELL_ASSETS = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",
+  // suoni reali di f0 (registrazioni CC): disponibili anche offline
+  "/sounds/moo.mp3",
+  "/sounds/horn.mp3",
+  "/sounds/bell.mp3",
+  "/sounds/drum.mp3",
+  "/sounds/birds.mp3",
+  "/sounds/whistle.mp3",
 ];
 
 self.addEventListener("install", (event) => {

@@ -725,6 +725,26 @@
   // Suona un buffer normalizzandolo. Ritorna la durata in ms.
   function playSound(buf){ ensureAudio(); if(!buf) return 0; playBuffer(buf, null, (buf.__g!=null?buf.__g:normGain(buf))); return buf.duration*1000; }
 
+  // ---- suoni REALI di f0: registrazioni vere (CC) in /sounds, NON sintetizzate ----
+  // Vengono scaricate, decodificate e poi suonate con la STESSA normalizzazione di
+  // tutto il resto (normGain → masterGain → uscita): stesso livello degli altri suoni.
+  // Se il file non è ancora pronto (primo avvio senza cache), si usa il sintetico.
+  var F0_BUF = {}, F0_LOADING = {};
+  function loadF0(key){
+    if(F0_BUF[key]) return Promise.resolve(F0_BUF[key]);
+    if(F0_LOADING[key]) return F0_LOADING[key];
+    if(!audioCtx) return Promise.resolve(null);
+    var pr = fetch("sounds/"+key+".mp3")
+      .then(function(r){ if(!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(function(arr){ return audioCtx.decodeAudioData(arr); })
+      .then(function(buf){ buf.__g = normGain(buf); F0_BUF[key]=buf; return buf; })
+      .catch(function(){ F0_LOADING[key]=null; return null; });
+    F0_LOADING[key] = pr; return pr;
+  }
+  function preloadF0(){ try{ F0_SOUNDS.forEach(function(s){ loadF0(s.key); }); }catch(e){} }
+  // Suona il suono reale se disponibile, altrimenti il sintetico (e intanto lo scarica).
+  function f0play(key, synthFn){ var b=F0_BUF[key]; if(b) return playSound(b); loadF0(key); return playSound(synthFn()); }
+
   // ---- suoni "scoperta" di f0 ----
   // Regola per la PRIMA tappa (consapevolezza): suoni LUNGHI e CONTINUI (~2,6s di suono
   // vero, non un colpo secco), così è facile accorgersi che c'è un suono.
@@ -791,13 +811,15 @@
 
   // ============================== DEFINIZIONE FASI ==============================
   // Suoni F0: lunghi e continui; al tocco giusto si RIVELA chi era (figurina).
+  // Suoni REALI in /sounds (mp3): mucca, clacson, campanello, tamburo, uccellini, fischio.
+  // `fire` prova prima la registrazione vera, poi ripiega sul sintetico se non è pronta.
   var F0_SOUNDS = [
-    {key:"moo",    name:"mucca",     emoji:"🐮", fire:function(){ return playSound(makeMoo()); }},
-    {key:"horn",   name:"clacson",   emoji:"🚗", fire:function(){ return playSound(makeHorn()); }},
-    {key:"bell",   name:"campanello",emoji:"🔔", fire:function(){ return playSound(makeBell()); }},
-    {key:"roll",   name:"tamburo",   emoji:"🥁", fire:function(){ return playSound(makeRoll()); }},
-    {key:"birds",  name:"uccellini", emoji:"🐦", fire:function(){ return playSound(makeBirds()); }},
-    {key:"whistle",name:"fischio",   emoji:"🎶", fire:function(){ return playSound(makeWhistle()); }}
+    {key:"moo",    name:"mucca",     emoji:"🐮", fire:function(){ return f0play("moo",    makeMoo);     }},
+    {key:"horn",   name:"clacson",   emoji:"🚗", fire:function(){ return f0play("horn",   makeHorn);    }},
+    {key:"bell",   name:"campanello",emoji:"🔔", fire:function(){ return f0play("bell",   makeBell);    }},
+    {key:"drum",   name:"tamburo",   emoji:"🥁", fire:function(){ return f0play("drum",   makeRoll);    }},
+    {key:"birds",  name:"uccellini", emoji:"🐦", fire:function(){ return f0play("birds",  makeBirds);   }},
+    {key:"whistle",name:"fischio",   emoji:"🎶", fire:function(){ return f0play("whistle",makeWhistle); }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -814,7 +836,9 @@
     { id:"f5", emoji:"🧠", label:"Capiscilo!", sub:"Ascolta cosa ti chiedo e tocca le carte giuste, nell'ordine giusto.", trials:8, kind:"orders" }
   ];
   function phaseById(id){ for(var i=0;i<PHASES.length;i++){ if(PHASES[i].id===id) return PHASES[i]; } return null; }
-  function isUnlocked(p){ return !p.locked && !!progress.unlocked[p.id]; }
+  // Tutte le tappe sono SEMPRE accessibili (nessun blocco): chi si allena sceglie da
+  // dove partire. Le stelle restano come traccia dei progressi, non come lucchetto.
+  function isUnlocked(p){ return !p.locked; }
 
   // ============================== MAPPA ==============================
   var NODE_POS = { f0:[20,84], f1:[52,69], f2:[22,53], f3:[58,38], f4:[26,23], f5:[60,9] };
@@ -898,6 +922,7 @@
   function startSession(){
     ensureAudio();
     var p=curPhase; if(!p) return;
+    if(p.id==="f0") preloadF0();   // scarica le registrazioni reali mentre parte la sessione
     S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", curSnd:null };
     $("phStart").disabled=true; $("phStart").textContent="In corso…";
     stage.classList.add("touchable");
