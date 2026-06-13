@@ -309,6 +309,7 @@
       <div class="paltabs" id="palTabs" style="display:none">
         <button class="palchip" id="palPhon" aria-pressed="true">Lettere</button>
         <button class="palchip" id="palWord" aria-pressed="false">Parole</button>
+        <button class="palchip" id="palSay" aria-pressed="false">🎤 Dì una parola</button>
       </div>
       <div class="trialinfo" id="phTrial"></div>
       <div class="bigemo" id="phEmo">🎧</div>
@@ -923,7 +924,7 @@
   var timers = [];
   function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
-  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; I3=null; W4=null; C5=null; P=null; L=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
+  function abortSession(){ clearTimers(); stopCurrent(); if(typeof palStopRec==="function") palStopRec(); S=null; B=null; D=null; I3=null; W4=null; C5=null; P=null; L=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
 
   function startSession(){
     ensureAudio();
@@ -1527,6 +1528,9 @@
   // Il posto calmo: scorri lettere/parole e ascoltale quante volte vuoi.
   // Qui il riscontro visivo è permesso (non è un esercizio di detezione).
   var P=null;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;  // riconoscimento vocale
+  var palRec=null;
+  function palStopRec(){ if(palRec){ try{ palRec.onresult=palRec.onerror=palRec.onend=null; palRec.stop(); }catch(e){} palRec=null; } }
   function palItems(){ return P.mode==="phon" ? phonList : wordList; }
   function openPalestra(){
     abortSession(); curPhase=null; bandMode=false;
@@ -1536,23 +1540,27 @@
     screenPhase.style.display="flex";
     phaseControls.style.display="flex";
     phTitle.textContent="🎧 Palestra";
-    phSub.textContent="Ascolto libero: scorri con ‹ › e tocca (o premi la barra) per ascoltare. Modifichi le liste in ⚙.";
+    phSub.textContent="Ascolto libero. Lettere/Parole: scorri con ‹ › e tocca per ascoltare. «Dì una parola»: parli e te la rileggo.";
     resetPhaseScreen();
     $("palTabs").style.display="flex";
-    showPalArrows(true);
-    $("phStart").textContent="🔊 Ascolta";
     stage.classList.add("touchable");
-    palRender();
+    palSetMode("phon");
   }
   function palSetMode(m){
     if(!P) return;
+    palStopRec();
     P.mode=m; P.i=0;
     $("palPhon").setAttribute("aria-pressed", m==="phon"?"true":"false");
     $("palWord").setAttribute("aria-pressed", m==="word"?"true":"false");
-    palRender();
+    $("palSay").setAttribute("aria-pressed", m==="say"?"true":"false");
+    // UI comune: ripristina
+    $("typeRow").style.display="none";
+    $("phStart").style.display="";
+    if(m==="say"){ showPalArrows(false); palSayEnter(); }
+    else { $("phStart").textContent="🔊 Ascolta"; showPalArrows(true); palRender(); }
   }
   function palRender(){
-    if(!P) return;
+    if(!P || P.mode==="say") return;
     var items=palItems();
     if(!items.length){ phEmo.textContent="…"; phTrial.textContent=""; return; }
     P.i=Math.max(0, Math.min(P.i, items.length-1));
@@ -1568,6 +1576,7 @@
   }
   function palListen(){
     if(!P) return;
+    if(P.mode==="say"){ palSayStart(); return; }   // qui "ascolta" = parla al microfono
     var items=palItems(); if(!items.length) return;
     ensureAudio();
     var it=items[P.i];
@@ -1575,8 +1584,69 @@
     setStatus("play","Sto dicendo…","🔊");
     speakDetect(text, function(){ setStatus("","Premi di nuovo per risentire · ‹ › per scorrere","✓"); });
   }
-  function palStep(d){ if(!P) return; P.i+=d; palRender(); }
+  function palStep(d){ if(!P || P.mode==="say") return; P.i+=d; palRender(); }
   function showPalArrows(on){ var d=on?"block":"none"; var l=$("stageLeft"), r=$("stageRight"); if(l)l.style.display=d; if(r)r.style.display=d; }
+
+  // ---- «Dì una parola»: parli, l'app riconosce e te la fa risentire (voce TTS) ----
+  function palSayEnter(){
+    phEmo.style.display=""; phEmo.style.fontSize=""; phEmo.textContent="🎤";
+    phTrial.textContent="";
+    if(SR){
+      $("phStart").textContent="🎤 Parla";
+      setStatus("","Tocca «Parla» (o lo schermo) e di' una parola","🎤");
+    } else {
+      // niente riconoscimento (es. iOS): si scrive la parola e te la rileggo
+      $("phStart").style.display="none";
+      typeInput.value=""; typeInput.placeholder="Scrivi una parola e premi OK";
+      $("typeRow").style.display="flex";
+      setStatus("","Qui scrivi una parola e te la faccio sentire","✍️");
+    }
+  }
+  function palSayStart(){
+    if(!P || P.mode!=="say") return;
+    ensureAudio();
+    if(!SR){ palSayFallback("Riconoscimento non disponibile su questo browser. Scrivi la parola qui sotto."); return; }
+    palStopRec();
+    var r=new SR(); palRec=r;
+    r.lang="it-IT"; r.interimResults=false; r.maxAlternatives=1;
+    phEmo.textContent="👂";
+    setStatus("wait","Sto ascoltando… di' una parola","👂");
+    r.onresult=function(e){
+      palRec=null;
+      var w=(e.results[0][0].transcript||"").trim();
+      palSayHeard(w);
+    };
+    r.onerror=function(ev){
+      palRec=null;
+      if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){ palSayFallback("Microfono non autorizzato. Consenti il microfono, oppure scrivi qui sotto."); }
+      else if(ev.error==="no-speech"){ phEmo.textContent="🎤"; setStatus("err","Non ho sentito nulla, riprova","⚠️"); }
+      else { phEmo.textContent="🎤"; setStatus("err","Non ho capito, riprova","⚠️"); }
+    };
+    r.onend=function(){ palRec=null; };
+    try{ r.start(); }catch(e){ palRec=null; palSayFallback("Riconoscimento non disponibile. Scrivi la parola qui sotto."); }
+  }
+  function palSayHeard(w){
+    if(!P) return;
+    if(!w){ phEmo.textContent="🎤"; setStatus("err","Non ho capito, riprova","⚠️"); return; }
+    var word=w.split(/\s+/)[0];   // prendo la prima parola
+    phEmo.style.fontSize = word.length>6 ? "clamp(1.5rem,7vw,2.4rem)" : "clamp(2rem,9vw,3.2rem)";
+    phEmo.textContent=word;
+    setStatus("play","Ho capito «"+word+"» — te la faccio sentire…","🔊");
+    speakDetect(word, function(){ setStatus("","Tocca «Parla» (o lo schermo) per un'altra parola","✓"); });
+  }
+  function palSayFallback(msg){
+    $("phStart").style.display="none";
+    phEmo.textContent="✍️";
+    typeInput.value=""; typeInput.placeholder="Scrivi una parola e premi OK";
+    $("typeRow").style.display="flex";
+    setStatus("err", msg, "✍️");
+    setTimeout(function(){ try{ typeInput.focus(); }catch(e){} }, 50);
+  }
+  function palSayType(){
+    var w=(typeInput.value||"").trim(); if(!w) return;
+    typeInput.value=""; typeInput.blur();
+    palSayHeard(w);
+  }
 
   // ============================== ALBUM DELLE FIGURINE ==============================
   function openAlbum(){
@@ -1851,10 +1921,13 @@
   // frecce minimali ai lati del palco (Palestra)
   $("stageLeft").addEventListener("click", function(ev){ ev.stopPropagation(); if(P) palStep(-1); });
   $("stageRight").addEventListener("click", function(ev){ ev.stopPropagation(); if(P) palStep(1); });
-  $("palPhon").addEventListener("click", function(){ palSetMode("phon"); });
-  $("palWord").addEventListener("click", function(){ palSetMode("word"); });
-  $("typeOk").addEventListener("click", w4Submit);
-  typeInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); w4Submit(); } });
+  $("palPhon").addEventListener("click", function(ev){ ev.stopPropagation(); palSetMode("phon"); });
+  $("palWord").addEventListener("click", function(ev){ ev.stopPropagation(); palSetMode("word"); });
+  $("palSay").addEventListener("click", function(ev){ ev.stopPropagation(); palSetMode("say"); });
+  // i click dentro la riga di scrittura non devono "rimbalzare" sul palco (= riascolto/mic)
+  $("typeRow").addEventListener("click", function(ev){ ev.stopPropagation(); });
+  $("typeOk").addEventListener("click", function(){ if(P && P.mode==="say"){ palSayType(); return; } w4Submit(); });
+  typeInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); if(P && P.mode==="say"){ palSayType(); return; } w4Submit(); } });
   // orecchio: un solo chip che cicla L+R → L → R
   $("earChip").addEventListener("click", function(){ ensureAudio(); cycleEar(); });
   (function(){
