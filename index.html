@@ -64,7 +64,7 @@
   }
 
   /* --- corpo --- */
-  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:.4rem clamp(.8rem,4vw,2rem) .4rem;min-height:0}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.55rem;padding:.3rem clamp(.8rem,4vw,2rem) .35rem;min-height:0}
 
   .stage{
     width:min(640px,92vw);background:var(--surface);border-radius:30px;box-shadow:var(--shadow);
@@ -99,7 +99,10 @@
   .phase-sub{font-size:.85rem;color:var(--muted);text-align:center;max-width:30rem}
   .trialinfo{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.5px;min-height:1.2em}
   .lingrow{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
-  .lingchip{font-family:'Fredoka';font-weight:600;font-size:1rem;padding:.45rem .8rem;border-radius:12px;background:var(--idle-soft);color:var(--muted)}
+  .lingchip{font-family:'Fredoka';font-weight:700;font-size:1.25rem;padding:.5rem .95rem;border-radius:14px;background:var(--idle-soft);color:var(--ink);border:0;cursor:pointer;min-width:50px;transition:transform .08s}
+  .lingchip:active{transform:translateY(2px)}
+  .lingchip.right{background:var(--wait-soft);outline:3px solid var(--wait);color:var(--wait)}
+  .lingchip.wrong{background:#FDE7E7;outline:3px solid #C0392B}
   .lingchip.ok{background:var(--wait-soft);color:var(--wait)}
 
   /* bottone strumento (profilo per banda) */
@@ -134,8 +137,8 @@
 
   /* --- banner di stato: SEMPRE visibile cosa sta facendo --- */
   .status{
-    width:min(640px,92vw);border-radius:18px;padding:.8rem 1.1rem;
-    display:flex;align-items:center;gap:.7rem;font-weight:600;font-size:1rem;
+    width:min(640px,92vw);border-radius:16px;padding:.6rem .95rem;
+    display:flex;align-items:center;gap:.6rem;font-weight:600;font-size:.94rem;
     background:var(--idle-soft);color:var(--ink);transition:background .2s;
   }
   .status .ico{font-size:1.4rem;line-height:1;flex:none}
@@ -155,21 +158,27 @@
   .act.secondary{background:var(--wait)}
   .act:disabled{opacity:.5;cursor:default}
 
-  .engine{font-size:.74rem;color:var(--muted);text-align:center;display:flex;align-items:center;gap:.35rem;justify-content:center;opacity:.85}
-  .engine .ed{width:8px;height:8px;border-radius:50%;background:var(--idle)}
-  .engine.cloud .ed{background:var(--wait)}
-  .outwrap{margin-top:.1rem}
-  .outbadge{border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.15rem .5rem;border-radius:9px}
-  .outbadge:hover{background:var(--idle-soft)}
-  .outbadge:active{transform:translateY(1px)}
-  .outbadge .caret{opacity:.6;font-size:.62rem}
-  .outsel{display:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter';font-size:.78rem;border-radius:9px;padding:.2rem .4rem;max-width:280px}
-  .earrow{display:flex;justify-content:center;align-items:center;gap:.4rem;margin-top:.3rem}
-  .earrow .earlab{font-size:.7rem;color:var(--muted)}
-  .earwrap{display:inline-flex;gap:.22rem;background:var(--idle-soft);border-radius:11px;padding:.16rem}
-  .earbtn{border:0;background:transparent;cursor:pointer;font-family:'Fredoka';font-weight:600;font-size:.74rem;color:var(--muted);padding:.24rem .6rem;border-radius:8px;line-height:1;min-width:32px}
-  .earbtn[aria-pressed="true"]{background:var(--wait);color:#fff}
-  .earbtn:active{transform:translateY(1px)}
+  /* riga UNICA in basso: voce · uscita audio · orecchio (compatti) */
+  .botbar{width:min(640px,92vw);display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:nowrap;margin-top:.2rem}
+  .bchip{border:0;background:var(--surface);box-shadow:var(--shadow);font-family:'Inter';font-size:.74rem;font-weight:600;color:var(--muted);
+    cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.36rem .6rem;border-radius:11px;line-height:1;min-width:0}
+  .bchip>span:not(.ed):not(.caret){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bchip:active{transform:translateY(1px)}
+  .bchip .ed{width:8px;height:8px;border-radius:50%;background:var(--idle);flex:none}
+  .bchip.cloud .ed{background:var(--wait)}
+  .bchip .caret{opacity:.6;font-size:.62rem;flex:none}
+  #outBadge{flex:1 1 auto;justify-content:center}
+  #voiceChip,#earChip{flex:none}
+  #earChip{font-family:'Fredoka';color:var(--wait)}
+  .outsel{display:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:'Inter';font-size:.78rem;border-radius:9px;padding:.2rem .4rem;max-width:60vw}
+  /* frecce minimali ai lati del palco (Palestra) */
+  .stagearrow{position:absolute;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);
+    font-family:'Fredoka';font-weight:600;font-size:2.1rem;line-height:1;cursor:pointer;padding:.2rem .45rem;opacity:.5;display:none;z-index:2;touch-action:manipulation}
+  .stagearrow:hover{opacity:.9}
+  .stagearrow:active{transform:translateY(-50%) scale(.88)}
+  .stagearrow.left{left:.1rem}
+  .stagearrow.right{right:.1rem}
+  .stagearrow[disabled]{opacity:.16;cursor:default}
 
   /* avviso installazione PWA (Android/iOS) */
   .installbar{
@@ -317,6 +326,10 @@
       <div class="phase-title">📒 Album delle figurine</div>
       <div class="albwrap" id="albumBody"></div>
     </div>
+
+    <!-- frecce minimali ai lati del palco (compaiono solo in Palestra) -->
+    <button class="stagearrow left" id="stageLeft" type="button" aria-label="Precedente">‹</button>
+    <button class="stagearrow right" id="stageRight" type="button" aria-label="Successivo">›</button>
   </div>
 
   <div class="status" id="status" role="status" aria-live="polite">
@@ -326,9 +339,7 @@
 
   <div class="controls" id="phaseControls" style="display:none">
     <button class="nav" id="backMap">‹ Mappa</button>
-    <button class="nav" id="palPrev" style="display:none" aria-label="Precedente">‹</button>
     <button class="act" id="phStart">Inizia</button>
-    <button class="nav" id="palNext" style="display:none" aria-label="Successivo">›</button>
     <button class="act secondary" id="ansSame" style="display:none">🟰 Uguali</button>
     <button class="act" id="ansDiff" style="display:none">↔️ Diversi</button>
   </div>
@@ -339,18 +350,12 @@
     <button class="ic" id="installClose" aria-label="Chiudi">×</button>
   </div>
 
-  <div class="engine" id="engineBadge"><span class="ed"></span><span id="engineText">pronto</span></div>
-  <div class="engine outwrap">
-    <button class="outbadge" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
+  <!-- UNA sola riga: voce · uscita audio · orecchio (compatti) -->
+  <div class="botbar">
+    <button class="bchip" id="voiceChip" type="button" title="Tocca per cambiare voce"><span class="ed" id="voiceDot"></span><span id="engineText">voce</span></button>
+    <button class="bchip" id="outBadge" type="button" title="Scegli dove far uscire il suono">🔈 <span id="outText">uscita…</span> <span class="caret">▾</span></button>
     <select id="outSelMain" class="outsel" aria-label="Uscita audio"></select>
-  </div>
-  <div class="earrow" id="earRow">
-    <span class="earlab">🎧 Orecchio:</span>
-    <div class="earwrap" role="group" aria-label="Scelta orecchio">
-      <button class="earbtn" id="earL" type="button" aria-pressed="false" title="Solo orecchio sinistro">L</button>
-      <button class="earbtn" id="earB" type="button" aria-pressed="true"  title="Tutti e due (normale)">L+R</button>
-      <button class="earbtn" id="earR" type="button" aria-pressed="false" title="Solo orecchio destro">R</button>
-    </div>
+    <button class="bchip" id="earChip" type="button" title="Orecchio: tocca per cambiare (L · L+R · R)">🎧 <span id="earState">L+R</span></button>
   </div>
 </main>
 
@@ -522,7 +527,7 @@
   // ============================== ELEMENTI ==============================
   var $ = function(id){return document.getElementById(id)};
   var stage=$("stage"), statusEl=$("status"), statusIco=$("statusIco"), statusText=$("statusText");
-  var engineBadge=$("engineBadge"), engineText=$("engineText"), engineBox=$("engineBox");
+  var engineBadge=$("voiceChip"), engineText=$("engineText"), engineBox=$("engineBox");
   var screenMap=$("screenMap"), screenPhase=$("screenPhase"), phaseControls=$("phaseControls");
   var phTitle=$("phTitle"), phSub=$("phSub"), phTrial=$("phTrial"), phEmo=$("phEmo"), lingRow=$("lingRow");
 
@@ -599,10 +604,10 @@
   }
   function setVolume(v){ volume=v; if(masterGain) masterGain.gain.value = v; }
   // Scelta orecchio: instrada il suono solo a sinistra, solo a destra o entrambi.
-  function updateEarUI(){
-    var m={left:"earL",both:"earB",right:"earR"};
-    ["earL","earB","earR"].forEach(function(id){ var b=$(id); if(b) b.setAttribute("aria-pressed", m[earSide]===id?"true":"false"); });
-  }
+  var EAR_LABEL={left:"L",both:"L+R",right:"R"};
+  function updateEarUI(){ var el=$("earState"); if(el) el.textContent = EAR_LABEL[earSide]||"L+R"; }
+  // un solo chip: ogni tocco cicla L+R → L → R → L+R (si vede solo lo stato attivo)
+  function cycleEar(){ var order=["both","left","right"], i=order.indexOf(earSide); applyEarSide(order[(i+1)%3]); }
   function applyEarSide(side){
     earSide = side;
     if(panNode) panNode.pan.value = (side==="left"?-1:side==="right"?1:0);
@@ -829,7 +834,7 @@
 
   var PHASES = [
     { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono: scoprirai chi l'ha fatto! I suoni arrivano quando meno te lo aspetti.", trials:8, sounds:F0_SOUNDS, catchRate:0 },
-    { id:"f1", emoji:"🎵", label:"Check di Ling",  sub:"I 6 suoni della voce (m·u·a·i·sc·s): tocca lo schermo appena senti la voce. Controlla che arrivino tutte le frequenze.", kind:"ling" },
+    { id:"f1", emoji:"🎵", label:"Check di Ling",  sub:"I 6 suoni della voce (m·u·a·i·sc·s) girano di continuo: ascolta e tocca la lettera giusta. Così controlli tutte le frequenze.", kind:"ling" },
     { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", sub:"Ascolti due suoni di fila: erano uguali o diversi? Tocca lo schermo per riascoltarli.", trials:10, kind:"discr" },
     { id:"f3", emoji:"👉", label:"Indicalo!",  sub:"Guarda le carte, ascolta la parola e tocca la carta giusta. 3 volte giusta = la carta è tua!", trials:10, kind:"pick" },
     { id:"f4", emoji:"✍️", label:"Scrivilo!",  sub:"Ascolta bene la parola (non si vede!) e scrivila. Tocca lo schermo per risentirla.", trials:8, kind:"write" },
@@ -878,6 +883,7 @@
     $("screenAlbum").style.display="none";
     phaseControls.style.display="none";
     stage.classList.remove("touchable");
+    showPalArrows(false);
     setStatus("","Scegli una tappa del percorso","👆");
     renderMap();
   }
@@ -889,7 +895,7 @@
     $("cardsRow").style.display="none";
     $("typeRow").style.display="none";
     $("palTabs").style.display="none";
-    $("palPrev").style.display="none"; $("palNext").style.display="none";
+    showPalArrows(false);
     $("ansSame").style.display="none"; $("ansDiff").style.display="none";
     $("spectrum").style.display="none";
     $("phStart").style.display="flex"; $("phStart").disabled=false;
@@ -917,7 +923,7 @@
   var timers = [];
   function later(fn, ms){ var t=setTimeout(fn, ms); timers.push(t); return t; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
-  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; I3=null; W4=null; C5=null; P=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
+  function abortSession(){ clearTimers(); stopCurrent(); S=null; B=null; D=null; I3=null; W4=null; C5=null; P=null; L=null; $("ansSame").style.display="none"; $("ansDiff").style.display="none"; document.body.removeAttribute("data-trial"); }
 
   function startSession(){
     ensureAudio();
@@ -938,20 +944,20 @@
     showListen();
     setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
     S.state="waiting"; document.body.setAttribute("data-trial","waiting");
-    var delay = 1500 + Math.random()*3000;
+    var delay = 750 + Math.random()*1500;
     later(function(){
       if(!S || S.state!=="waiting") return;
       if(Math.random() < (S.phase.catchRate||0)){
         // prova "trabocchetto": nessun suono; successo = NON toccare
         S.state="catch"; S.catchN++; document.body.setAttribute("data-trial","catch");
-        later(function(){ if(S && S.state==="catch"){ S.catchOk++; feedback("🤫","Bravo: non c'era nessun suono!", "wait"); } }, 4000);
+        later(function(){ if(S && S.state==="catch"){ S.catchOk++; feedback("🤫","Bravo: non c'era nessun suono!", "wait"); } }, 2500);
         return;
       }
       var snd = S.phase.sounds[Math.floor(Math.random()*S.phase.sounds.length)];
       S.curSnd = snd;
       S.state="sounding"; document.body.setAttribute("data-trial","sounding");
       var dur = snd.fire() || 800;
-      later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 2800);
+      later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 2200);
     }, delay);
   }
   function feedback(emo, text, kind){
@@ -960,7 +966,7 @@
     clearTimers();
     showEmo(emo);
     setStatus(kind||"", text, emo);
-    later(nextTrial, 1100);
+    later(nextTrial, 600);
   }
   function onStageTouch(){
     if(!S) return;
@@ -1095,7 +1101,7 @@
     var firstA = Math.random() < 0.5;
     D.s1 = firstA ? it.a : it.b;
     D.s2 = D.truthSame ? D.s1 : (firstA ? it.b : it.a);
-    later(f2PlayPair, 700);
+    later(f2PlayPair, 350);
   }
   function f2PlayPair(){
     if(!D || !D.s1) return;
@@ -1112,7 +1118,7 @@
           showListen();
           f2EnableAnswers();
         });
-      }, 600);
+      }, 300);
     });
   }
   function f2EnableAnswers(){
@@ -1135,7 +1141,7 @@
     var hot = correct && D.streak>=3;   // filotto: 3+ di fila
     showEmo(hot ? "🔥" : correct ? "🎉" : "🙈");
     setStatus(correct?"wait":"", hot ? (D.streak+" di fila! Grande!") : correct ? "Esatto!" : ("Erano "+(D.truthSame?"uguali":"diversi")), hot?"🔥":correct?"🎉":"🙈");
-    later(f2Next, 1200);
+    later(f2Next, 650);
   }
   function f2Finish(){
     var p=D.phase, total=D.total, good=D.ok, score=total?good/total:0, st=starsFor(score);
@@ -1153,16 +1159,27 @@
     $("phStart").disabled=false; $("phStart").textContent="Ancora";
   }
 
-  // ---- Check di Ling (detezione dei 6 suoni parlati) ----
+  // ---- Check di Ling: IDENTIFICAZIONE. 6 icone (m·u·a·i·sc·s) sempre visibili; i suoni
+  //      "girano" di continuo (gap brevi) e si tocca la lettera corrispondente. ----
   var L=null;
+  function lingRenderChips(){
+    lingRow.innerHTML = LING.map(function(s){
+      return '<button class="lingchip" type="button" data-k="'+s.key+'">'+s.key.toUpperCase()+'</button>';
+    }).join("");
+    lingRow.style.display="flex";
+    lingRow.querySelectorAll(".lingchip").forEach(function(b){
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); lingPick(b.getAttribute("data-k")); });
+    });
+  }
+  function lingChip(key){ return lingRow.querySelector('.lingchip[data-k="'+key+'"]'); }
   function startLing(){
     ensureAudio();
     L = { order: LING.slice().sort(function(){return Math.random()-0.5;}), i:0, res:{}, state:"idle" };
     $("phStart").disabled=true; $("phStart").textContent="In corso…";
     stage.classList.add("touchable");
-    lingRow.style.display="none";
+    lingRenderChips();
     showListen();
-    setStatus("wait","Tocca appena senti una voce","🎧");
+    setStatus("wait","Ascolta e tocca la lettera giusta","🎧");
     lingNext();
   }
   function lingNext(){
@@ -1170,27 +1187,42 @@
     if(L.i >= L.order.length){ lingFinish(); return; }
     var item = L.order[L.i];
     phTrial.textContent = "Suono "+(L.i+1)+" di 6";
-    showListen();
-    setStatus("wait","Tocca appena senti una voce","🎧");
-    L.state="waiting";
+    lingRow.querySelectorAll(".lingchip").forEach(function(b){ b.classList.remove("right","wrong"); });
+    L.state="gap";
     later(function(){
-      if(!L || L.state!=="waiting") return;
+      if(!L || L.state!=="gap") return;
       L.state="sounding";
+      setStatus("wait","Quale hai sentito?","👂");
       speakDetect(item.say, function(){
-        later(function(){ if(L && L.state==="sounding"){ L.res[item.key]=0; L.i++; lingFeedback("💤"); } }, 1600);
+        if(!L) return;
+        if(L.state==="sounding") L.state="answer";
+        // finestra di risposta: se non tocca nulla → non riconosciuto, si va avanti
+        later(function(){ if(L && L.state==="answer"){ L.res[item.key]=0; lingReveal(item.key,false); } }, 2600);
       });
-    }, 1500 + Math.random()*2500);
+    }, 450);
   }
-  function lingFeedback(emo){
+  function lingPick(key){
+    if(!L || (L.state!=="sounding" && L.state!=="answer")) return;
+    var item=L.order[L.i], correct = key===item.key;
+    L.res[item.key] = correct?1:0;
+    lingReveal(key, correct);
+  }
+  function lingReveal(pickedKey, correct){
     if(!L) return;
     L.state="feedback"; clearTimers(); stopCurrent();
-    showEmo(emo);
-    later(lingNext, 900);
+    var item=L.order[L.i];
+    var pc=lingChip(pickedKey); if(pc) pc.classList.add(correct?"right":"wrong");
+    if(!correct){ var rc=lingChip(item.key); if(rc) rc.classList.add("right"); } // mostra qual era
+    showEmo(correct?"🎉":"🙈");
+    L.i++;
+    later(lingNext, 600);
   }
-  function lingTouch(){
-    if(!L) return;
-    if(L.state==="sounding"){ var item=L.order[L.i]; L.res[item.key]=1; L.i++; lingFeedback("🎉"); }
-    else if(L.state==="waiting"){ showEmo("🙈"); }
+  // tocco sul palco / barra = risenti il suono corrente
+  function lingReplay(){
+    if(!L || (L.state!=="sounding" && L.state!=="answer")) return;
+    var item=L.order[L.i];
+    L.state="sounding";
+    speakDetect(item.say, function(){ if(L && L.state==="sounding") L.state="answer"; });
   }
   function lingFinish(){
     var res=L.res; L=null;
@@ -1311,7 +1343,7 @@
       errAdd(I3.target.w);   // tornerà più spesso finché non la riconosci
       setStatus("", "Era "+I3.target.e+" «"+I3.target.w+"»", "🙈");
     }
-    later(f3Next, 1500);
+    later(f3Next, 800);
   }
   function f3Finish(){
     var p=I3.phase, total=I3.total, good=I3.ok, st=starsFor(total?good/total:0);
@@ -1398,7 +1430,7 @@
       showEmo("🙈");
       setStatus("", "Era «"+t.w+"» (hai scritto: "+typed+")", "🙈");
     }
-    later(w4Next, 1700);
+    later(w4Next, 900);
   }
   function w4Finish(){
     var p=W4.phase, total=W4.total, good=W4.ok, st=starsFor(total?good/total:0);
@@ -1462,7 +1494,7 @@
         C5.state="feedback"; stopCurrent();
         C5.ok++;
         setStatus("wait","Perfetto! Missione compiuta!","🎉");
-        later(c5Next, 1300);
+        later(c5Next, 700);
       } else {
         setStatus("wait","Giusto! Continua…","👍");
       }
@@ -1473,7 +1505,7 @@
         if(b.getAttribute("data-w")===C5.seq[C5.pos].w) b.classList.add("right");
       });
       setStatus("", "La frase era: «"+C5.sentence+"»", "🙈");
-      later(c5Next, 1800);
+      later(c5Next, 950);
     }
   }
   function c5Finish(){
@@ -1507,7 +1539,7 @@
     phSub.textContent="Ascolto libero: scorri con ‹ › e tocca (o premi la barra) per ascoltare. Modifichi le liste in ⚙.";
     resetPhaseScreen();
     $("palTabs").style.display="flex";
-    $("palPrev").style.display="flex"; $("palNext").style.display="flex";
+    showPalArrows(true);
     $("phStart").textContent="🔊 Ascolta";
     stage.classList.add("touchable");
     palRender();
@@ -1530,9 +1562,9 @@
     phEmo.style.fontSize = label.length>3 ? "clamp(1.8rem,8vw,3rem)" : "";
     phEmo.textContent = label + (P.mode==="word" && it.e ? " "+it.e : "");
     phTrial.textContent = (P.i+1)+" di "+items.length;
-    $("palPrev").disabled = P.i===0;
-    $("palNext").disabled = P.i===items.length-1;
-    setStatus("","Tocca per ascoltare · ‹ › per scorrere","👆");
+    $("stageLeft").disabled = P.i===0;
+    $("stageRight").disabled = P.i===items.length-1;
+    setStatus("","Tocca per ascoltare · ‹ › ai lati per scorrere","👆");
   }
   function palListen(){
     if(!P) return;
@@ -1544,6 +1576,7 @@
     speakDetect(text, function(){ setStatus("","Premi di nuovo per risentire · ‹ › per scorrere","✓"); });
   }
   function palStep(d){ if(!P) return; P.i+=d; palRender(); }
+  function showPalArrows(on){ var d=on?"block":"none"; var l=$("stageLeft"), r=$("stageRight"); if(l)l.style.display=d; if(r)r.style.display=d; }
 
   // ============================== ALBUM DELLE FIGURINE ==============================
   function openAlbum(){
@@ -1553,7 +1586,7 @@
     $("screenAlbum").style.display="flex";
     phaseControls.style.display="flex";
     $("phStart").style.display="none";
-    $("palPrev").style.display="none"; $("palNext").style.display="none";
+    showPalArrows(false);
     $("ansSame").style.display="none"; $("ansDiff").style.display="none";
     stage.classList.remove("touchable");
     renderAlbum();
@@ -1658,13 +1691,13 @@
         B.state="catch"; renderSpectrum();
         later(function(){ if(B && B.state==="catch"){ B.idx++; bandFeedback("🤫"); } }, 2200);
       }
-    }, 1000 + Math.random()*1800);
+    }, 600 + Math.random()*900);
   }
   function bandFeedback(emo){
     if(!B) return;
     B.state="feedback"; clearTimers(); stopCurrent();
     renderSpectrum();
-    later(bandNext, 650);
+    later(bandNext, 400);
   }
   function bandTouch(){
     if(!B) return;
@@ -1782,7 +1815,7 @@
     else if(W4) w4Replay();
     else if(C5) c5Replay();
     else if(P) palListen();
-    else if(L) lingTouch();
+    else if(L) lingReplay();
     else if(B) bandTouch();
   });
   window.addEventListener("keydown", function(e){
@@ -1790,7 +1823,7 @@
     if(typing) return;
     if(e.code==="Space"){ e.preventDefault();
       if(S) onStageTouch(); else if(D) f2Replay(); else if(I3) f3Replay(); else if(W4) w4Replay();
-      else if(C5) c5Replay(); else if(P) palListen(); else if(L) lingTouch(); else if(B) bandTouch();
+      else if(C5) c5Replay(); else if(P) palListen(); else if(L) lingReplay(); else if(B) bandTouch();
     }
     else if(e.key==="ArrowLeft" && P){ e.preventDefault(); palStep(-1); }
     else if(e.key==="ArrowRight" && P){ e.preventDefault(); palStep(1); }
@@ -1815,20 +1848,28 @@
   $("ansDiff").addEventListener("click", function(){ f2Answer(false); });
   $("palBtn").addEventListener("click", openPalestra);
   $("albumBtn").addEventListener("click", openAlbum);
-  $("palPrev").addEventListener("click", function(){ palStep(-1); });
-  $("palNext").addEventListener("click", function(){ palStep(1); });
+  // frecce minimali ai lati del palco (Palestra)
+  $("stageLeft").addEventListener("click", function(ev){ ev.stopPropagation(); if(P) palStep(-1); });
+  $("stageRight").addEventListener("click", function(ev){ ev.stopPropagation(); if(P) palStep(1); });
   $("palPhon").addEventListener("click", function(){ palSetMode("phon"); });
   $("palWord").addEventListener("click", function(){ palSetMode("word"); });
   $("typeOk").addEventListener("click", w4Submit);
   typeInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); w4Submit(); } });
-  $("earL").addEventListener("click", function(){ ensureAudio(); applyEarSide("left"); });
-  $("earB").addEventListener("click", function(){ ensureAudio(); applyEarSide("both"); });
-  $("earR").addEventListener("click", function(){ ensureAudio(); applyEarSide("right"); });
+  // orecchio: un solo chip che cicla L+R → L → R
+  $("earChip").addEventListener("click", function(){ ensureAudio(); cycleEar(); });
   (function(){
     var AC = window.AudioContext || window.webkitAudioContext;
-    if(!(AC && AC.prototype && AC.prototype.createStereoPanner)){ var er=$("earRow"); if(er) er.style.display="none"; }
+    if(!(AC && AC.prototype && AC.prototype.createStereoPanner)){ var ec=$("earChip"); if(ec) ec.style.display="none"; }
     updateEarUI();
   })();
+  // voce: tocco sul chip in basso = cicla tra le 4 voci
+  var VOICE_ORDER=["it-IT-DiegoNeural","it-IT-GiuseppeMultilingualNeural","it-IT-IsabellaNeural","it-IT-ElsaNeural"];
+  $("voiceChip").addEventListener("click", function(){
+    var i=VOICE_ORDER.indexOf(currentVoice); currentVoice=VOICE_ORDER[(i+1)%VOICE_ORDER.length];
+    persistSettings();
+    var sel=$("voiceSel"); if(sel) sel.value=currentVoice;
+    engineText.textContent = cloudReady ? ("Voce: "+voiceShort(currentVoice)) : "Voce del dispositivo";
+  });
   $("bandBtn").addEventListener("click", function(){ bandMode=true; openBandTest(); });
 
   // ============================== IMPOSTAZIONI ==============================

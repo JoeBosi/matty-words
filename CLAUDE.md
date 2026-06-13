@@ -28,8 +28,10 @@ Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
    Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti, non colpi secchi; finestra
    per rispondere ampia (durata + 2,8s). Tocca quando senti →
    si RIVELA chi era e vinci la **figurina**. 8 prove.
-2. **f1 — 🎵 Check di Ling** (detezione) — SOLO i 6 suoni di Ling (m·u·a·i·sc·s, voce
-   TTS): tocca quando senti la voce. Stelle in base ai sentiti/6.
+2. **f1 — 🎵 Check di Ling** (identificazione) — 6 icone sempre visibili (M·U·A·I·SC·S);
+   i 6 suoni di Ling (voce TTS) **girano di continuo** (gap brevi) e si tocca la lettera
+   corrispondente. Pick giusto = chip verde; sbagliato = rosso + si rivela quello giusto.
+   Tocco sul palco = risenti. Stelle in base ai riconosciuti/6.
 3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — due stimoli di fila, rispondi
    UGUALI/DIVERSI (pulsanti nella barra comandi). Soprasegmentali + coppie minime TTS.
    Filotto: 3+ giuste di fila → 🔥. Tocco sul palco = riascolta. 10 prove.
@@ -74,15 +76,19 @@ dispositivo/volume/uscita (avviso nel librino).
 ## Regola di design fondamentale (aggiornata)
 
 Banner di stato SEMPRE visibile (icona+testo) — chi non sente deve capire lo stato.
-**Eccezione voluta (detezione)**: durante le prove di f0/f1/Ling lo stato NON dice
+**Eccezione voluta (detezione f0)**: durante le prove di f0 lo stato NON dice
 "sto suonando" e niente barre animate — un indizio visivo svuoterebbe l'esercizio.
-Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO la risposta.
+In f1 (identificazione) le 6 icone sono visibili ma lo stato non rivela MAI quale suono
+sta partendo. Lo stato resta neutro e il riscontro arriva DOPO la risposta.
 
 ## Comandi
-- **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" (f0/f1) oppure
-  "risenti" (f2/f3/f4/f5, Palestra).
-- Pulsanti: ‹ Mappa · Inizia/Ancora (diventa «🔊 Risenti» durante f3/f4/f5) ·
-  Uguali/Diversi (f2) · ‹ › (Palestra).
+- **Tocco sul palco** o **barra spaziatrice** = "ho sentito!" (f0) / "risenti" (f1 e
+  f2/f3/f4/f5, Palestra).
+- Barra comandi: ‹ Mappa · Inizia/Ancora (diventa «🔊 Risenti» durante f3/f4/f5) ·
+  Uguali/Diversi (f2). **Frecce ‹ ›** della Palestra: minimal, ai due lati del palco.
+- **Riga unica in basso** (compatta): chip **voce** (tocco = cicla le 4 voci) · chip
+  **uscita audio** · chip **orecchio** (mostra solo lo stato attivo; tocco = cicla
+  L+R → L → R). Niente etichette lunghe: solo icone + stato.
 
 ## Stack
 - Statico + serverless per **Vercel**, file unico `index.html` (vanilla, no build).
@@ -93,12 +99,13 @@ Lo stato resta neutro («🎧 tocca appena senti») e il riscontro arriva DOPO l
 - Audio: Web Audio (GainNode = volume ok su iOS; sblocco nel gesto; su iOS "ponte"
   MediaStream→`<audio>` per scegliere l'uscita con AirPlay). Selettore uscita nel
   badge in basso (Chrome: picker nativo; Edge: tendina; iOS: AirPlay).
-- **Scelta orecchio (L · L+R · R)**: toggle in basso che instrada il suono solo a
-  sinistra, solo a destra o entrambi, via `StereoPannerNode` (`panNode`) inserito tra
-  `masterGain` e l'uscita. «Entrambi» bypassa il panner (nessuna attenuazione); L/R
-  azzerano davvero il canale opposto (verificato: pan ±1 → RMS dell'altro canale = 0).
-  Utile per impianti mono/bilaterali e per allenare un orecchio per volta. Stato in
-  `earSide` (localStorage); nascosto se il browser non ha `createStereoPanner`.
+- **Scelta orecchio (L · L+R · R)**: **un solo chip** in basso (`earChip`) che mostra
+  SOLO lo stato attivo; ogni tocco cicla L+R → L → R (`cycleEar`). Instrada il suono via
+  `StereoPannerNode` (`panNode`) tra `masterGain` e l'uscita. «Entrambi» bypassa il panner
+  (nessuna attenuazione); L/R azzerano davvero il canale opposto (verificato: pan ±1 → RMS
+  dell'altro canale = 0). Stato in `earSide` (localStorage); il chip è nascosto se il
+  browser non ha `createStereoPanner`. Voce, uscita audio e orecchio stanno in **un'unica
+  riga** in basso (`.botbar`/`.bchip`).
 - **Normalizzazione (regola di tutta l'app)**: OGNI suono (toni, tamburo, fischio,
   parole TTS) è generato/decodificato come buffer, normalizzato allo stesso livello
   (`normGain`: RMS target 0.12 + tetto picco 0.97) e POI moltiplicato per il volume
