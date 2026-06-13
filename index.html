@@ -298,7 +298,7 @@
       <div class="toolrow">
         <button class="toolbtn" id="palBtn">🎧 Palestra <small>ascolto libero</small></button>
         <button class="toolbtn" id="albumBtn">📒 Album <small>le tue figurine</small></button>
-        <button class="toolbtn" id="bandBtn">🎚️ Profilo per banda <small>per il tecnico</small></button>
+        <button class="toolbtn" id="bandBtn">🎚️ Tutti i suoni <small>dai gravi agli acuti</small></button>
       </div>
     </div>
 
@@ -364,28 +364,21 @@
 <div class="panel" id="infoPanel">
   <div class="card">
     <button class="close" id="infoClose">×</button>
-    <h2>📖 La scala dell'ascolto</h2>
+    <h2>📖 Come funziona</h2>
     <div class="info-body">
-      <p>La riabilitazione uditiva segue una gerarchia classica (<b>Erber</b>), come dei
-      <b>livelli di gioco</b>: si sale un gradino alla volta.</p>
+      <p>Matty Words è un <b>gioco per allenare l'orecchio</b>, un passo alla volta.
+      Ogni tappa è un gradino e si sale quando si è pronti — senza fretta.</p>
       <ol>
-        <li><b>Detezione</b> — «c'è suono o non c'è?» Si segnala quando si sente
-        qualcosa. Qui rientra il controllo quotidiano dei <b>6 suoni di Ling</b>
-        (<i>m&nbsp;·&nbsp;u&nbsp;·&nbsp;a&nbsp;·&nbsp;i&nbsp;·&nbsp;sc&nbsp;·&nbsp;s</i>), che i logopedisti
-        usano per verificare che l'impianto copra tutte le frequenze.</li>
-        <li><b>Discriminazione</b> — «questi due suoni sono uguali o diversi?» Non serve
-        capire <i>cosa</i> sono: basta distinguerli (palla/balla, lungo/corto, forte/piano).</li>
-        <li><b>Identificazione</b> — si sente una parola e la si <b>indica tra alternative</b>:
-        2–4 figure o parole sullo schermo. È il formato d'oro per un bambino: misurabile,
-        giocabile, e con le immagini non serve saper leggere.</li>
-        <li><b>Comprensione</b> — domande, frasi, ordini semplici («tocca il naso»),
-        ascolto nel rumore.</li>
+        <li><b>C'è un suono!</b> — ci si accorge quando parte un suono e si scopre chi l'ha fatto.</li>
+        <li><b>Uguali o diversi?</b> — due suoni di fila: erano uguali o diversi?</li>
+        <li><b>Indicalo!</b> — si ascolta una parola e si tocca la figura giusta.</li>
+        <li><b>Scrivilo!</b> — si ascolta una parola e la si scrive.</li>
+        <li><b>Capiscilo!</b> — si ascoltano piccoli ordini e si eseguono.</li>
       </ol>
-      <p>Le tappe del percorso seguono questa scala: dal sentire al <b>capire</b>.</p>
-      <p class="info-note">⚠️ Questa app <b>non è un dispositivo medico</b>: è un supporto
-      per l'allenamento. Il percorso e i risultati andrebbero condivisi con la propria
-      logopedista / il proprio audiologo. Per confrontare i risultati nel tempo usa
-      sempre lo <b>stesso dispositivo, lo stesso volume e la stessa uscita audio</b>.</p>
+      <p>C'è anche la <b>Palestra</b> per ascoltare lettere e parole quando si vuole, e
+      l'<b>Album</b> con le figurine che si vincono giocando.</p>
+      <p class="info-note">💡 Per ascoltare al meglio: ambiente tranquillo, volume comodo
+      e, se aiutano, le cuffie. È un gioco, non un esame: l'importante è divertirsi.</p>
     </div>
   </div>
 </div>
@@ -395,6 +388,13 @@
   <div class="card">
     <button class="close" id="close">×</button>
     <h2>Impostazioni</h2>
+
+    <div class="field" id="installField">
+      <label>📲 Installa l'app sul dispositivo</label>
+      <small id="installHow">Installa Matty Words: si apre a schermo intero, con la sua icona, e funziona anche senza internet.</small>
+      <button class="ghostbtn" id="installNow" type="button">📲 Installa Matty Words</button>
+      <div class="curout" id="installState"></div>
+    </div>
 
     <div class="enginebox" id="engineBox">Audio pronto.</div>
 
@@ -440,12 +440,12 @@
     </div>
 
     <div class="field">
-      <label>Registro delle sessioni</label>
-      <small>Da mostrare alla logopedista. Confrontabile solo a parità di dispositivo, volume e uscita.</small>
+      <label>Le tue sessioni</label>
+      <small>Lo storico delle partite, con stelle e risultati. Tutto resta sul tuo dispositivo.</small>
       <div class="regwarn" id="regWarn" style="display:none"></div>
       <div class="regchart" id="regChart"></div>
       <div class="reglist" id="regList">Nessuna sessione ancora.</div>
-      <button class="ghostbtn" id="regCsv" type="button">⬇️ Scarica registro (CSV)</button>
+      <button class="ghostbtn" id="regCsv" type="button">⬇️ Salva lo storico</button>
     </div>
   </div>
 </div>
@@ -835,7 +835,7 @@
 
   var PHASES = [
     { id:"f0", emoji:"🔔", label:"C'è un suono!",  sub:"Tocca lo schermo appena senti un suono: scoprirai chi l'ha fatto! I suoni arrivano quando meno te lo aspetti.", trials:8, sounds:F0_SOUNDS, catchRate:0 },
-    { id:"f1", emoji:"🎵", label:"Check di Ling",  sub:"I 6 suoni della voce (m·u·a·i·sc·s) girano di continuo: ascolta e tocca la lettera giusta. Così controlli tutte le frequenze.", kind:"ling" },
+    { id:"f1", emoji:"🎵", label:"Check di Ling",  sub:"I 6 suoni della voce (m·u·a·i·sc·s) girano di continuo: ascolta e tocca la lettera giusta. Così le senti tutte.", kind:"ling" },
     { id:"f2", emoji:"⚖️", label:"Uguali o diversi?", sub:"Ascolti due suoni di fila: erano uguali o diversi? Tocca lo schermo per riascoltarli.", trials:10, kind:"discr" },
     { id:"f3", emoji:"👉", label:"Indicalo!",  sub:"Guarda le carte, ascolta la parola e tocca la carta giusta. 3 volte giusta = la carta è tua!", trials:10, kind:"pick" },
     { id:"f4", emoji:"✍️", label:"Scrivilo!",  sub:"Ascolta bene la parola (non si vede!) e scrivila. Tocca lo schermo per risentirla.", trials:8, kind:"write" },
@@ -1722,8 +1722,8 @@
     $("screenAlbum").style.display="none";
     screenPhase.style.display="flex";
     phaseControls.style.display="flex";
-    phTitle.textContent="🎚️ Profilo di ascolto per banda";
-    phSub.innerHTML="2 suoni per ognuna delle 10 bande dello spettro. Tocca lo schermo appena senti un suono. <b>Tocca una barra</b> per riascoltare quel suono. Alla fine ottieni un profilo da mostrare al tecnico.";
+    phTitle.textContent="🎚️ Tutti i suoni";
+    phSub.innerHTML="Suoni che vanno dai <b>gravi</b> agli <b>acuti</b>, uno alla volta. Tocca lo schermo appena ne senti uno. <b>Tocca una barra</b> per riascoltare quel suono.";
     resetPhaseScreen();
     phEmo.style.display="none";
     lingRow.style.display="none";
@@ -1786,7 +1786,7 @@
     var lowOk=scores.slice(0,5).reduce(function(a,b){return a+b;},0);
     var highOk=scores.slice(5).reduce(function(a,b){return a+b;},0);
     var hint = highOk< lowOk-3 ? "Sembrano più deboli gli ACUTI (destra)." : lowOk< highOk-3 ? "Sembrano più deboli i GRAVI (sinistra)." : "";
-    setStatus(fa>2?"err":"", "Profilo pronto: "+heard+"/20 suoni. "+(fa>2?("⚠️ "+fa+" tocchi a vuoto: ripeti con più calma."):hint), fa>2?"⚠️":"📊");
+    setStatus(fa>2?"err":"", "Finito! "+heard+"/20 suoni sentiti. "+(fa>2?("⚠️ "+fa+" tocchi a vuoto: ripeti con più calma."):hint), fa>2?"⚠️":"📊");
     saveSession({ phase:"banda", trials:20, hits:heard, fa:fa,
       detail: BANDS.map(function(bd,i){ return bd.lab+":"+scores[i]; }).join(" ") });
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Ripeti il test";
@@ -1803,7 +1803,7 @@
     persistSessions();
   }
   var PHASE_NAMES = {f0:"C'è un suono!", f1:"Check di Ling", f2:"Uguali o diversi?", f3:"Indicalo!",
-                     f4:"Scrivilo!", f5:"Capiscilo!", banda:"Profilo per banda",
+                     f4:"Scrivilo!", f5:"Capiscilo!", banda:"Tutti i suoni",
                      ling:"Check di Ling", miSenti:"Mi senti?"};   // ultimi due: sessioni storiche
   function renderRegistro(){
     var list=$("regList");
@@ -1820,7 +1820,7 @@
     var warn=$("regWarn");
     if(det.length>=3 && det.every(function(s){return s.hits===0;})){
       warn.style.display="block";
-      warn.innerHTML="ℹ️ Nelle ultime sessioni non risulta nessun suono percepito. Può dipendere da tante cose (volume, dispositivo, attenzione). <b>Vale la pena mostrare questo registro al tuo centro impianti / alla logopedista.</b>";
+      warn.innerHTML="ℹ️ Nelle ultime partite non risulta nessun suono sentito. Può dipendere da tante cose: prova ad <b>alzare il volume</b>, a usare le <b>cuffie</b> o a scegliere un'altra <b>uscita audio</b>.";
     } else warn.style.display="none";
     renderRegChart();
   }
@@ -1954,6 +1954,7 @@
     $("phonText").value=phonToText();
     $("wordText").value=wordsToText();
     ensureAudio();
+    setupInstallUI();
     setupSinkUI();
     updateOutputLabel();
     renderRegistro();
@@ -2104,31 +2105,70 @@
   updateOutputLabel();
   showMap();
 
-  // ---------- avviso installazione PWA (Android/iOS) ----------
+  // ---------- installazione PWA: istruzioni in cima al setup + prompt nativo ----------
+  var pwaDeferred=null;
+  function isStandalonePWA(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone===true; }
+  function setupInstallUI(){
+    var how=$("installHow"), btn=$("installNow"), state=$("installState");
+    if(!how||!btn||!state) return;
+    var ua=navigator.userAgent||"";
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    state.textContent="";
+    if(isStandalonePWA()){
+      how.textContent="L'app è già installata: la stai usando a schermo intero. 🎉";
+      btn.style.display="none"; return;
+    }
+    btn.style.display="block"; btn.disabled=false;
+    if(pwaDeferred){            // Chrome/Edge/Android: si installa con UN clic
+      how.textContent="Tocca il pulsante: comparirà la finestra del dispositivo per installarla.";
+      btn.textContent="📲 Installa Matty Words";
+    } else if(isIOS){          // iOS non ha un'API: istruzioni native chiare
+      how.innerHTML="Su iPhone/iPad: tocca <b>Condividi</b> (il quadrato con la freccia ⬆️ in basso) e poi <b>«Aggiungi a schermata Home»</b>.";
+      btn.textContent="📋 Come si fa su iPhone";
+    } else {                   // altri browser: dal menu del browser
+      how.innerHTML="Apri il menu del browser (⋮) e scegli <b>«Installa app»</b> o <b>«Aggiungi a schermata Home»</b>.";
+      btn.textContent="📋 Come installarla";
+    }
+  }
+  $("installNow").addEventListener("click", function(){
+    var state=$("installState");
+    if(pwaDeferred){
+      pwaDeferred.prompt();
+      pwaDeferred.userChoice.then(function(c){
+        state.textContent = (c && c.outcome==="accepted") ? "Installazione avviata! ✅" : "Va bene, magari più tardi.";
+        pwaDeferred=null; setupInstallUI();
+      });
+      return;
+    }
+    var how=$("installHow"); if(how) how.scrollIntoView({block:"nearest"});
+    state.textContent="Segui i passaggi qui sopra ⬆️";
+  });
+  setupInstallUI();
+
+  // ---------- banner d'installazione in basso (una volta) ----------
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault(); pwaDeferred=e; setupInstallUI();
+    if(isStandalonePWA()) return;
+    try{ if(localStorage.getItem(LS.installDismiss)) return; }catch(e2){}
+    var bar=$("installBar"), txt=$("installText"), btn=$("installBtn");
+    if(txt) txt.textContent="Installa Matty Words: si apre a schermo intero, con la sua icona.";
+    if(btn) btn.hidden=false; if(bar) bar.hidden=false;
+  });
+  window.addEventListener("appinstalled", function(){ pwaDeferred=null; var bar=$("installBar"); if(bar) bar.hidden=true; setupInstallUI(); });
   (function(){
     var bar=$("installBar"), txt=$("installText"), btn=$("installBtn"), cls=$("installClose");
-    var standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone===true;
-    if(standalone) return;
+    if(isStandalonePWA()) return;
+    function dismiss(){ bar.hidden=true; try{ localStorage.setItem(LS.installDismiss,"1"); }catch(e){} }
+    cls.addEventListener("click", dismiss);
+    btn.addEventListener("click", function(){
+      if(!pwaDeferred) return;
+      pwaDeferred.prompt();
+      pwaDeferred.userChoice.then(function(){ pwaDeferred=null; bar.hidden=true; setupInstallUI(); });
+    });
     try{ if(localStorage.getItem(LS.installDismiss)) return; }catch(e){}
     var ua=navigator.userAgent||"";
     var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-    var isAndroid = /Android/.test(ua);
-    function dismiss(){ bar.hidden=true; try{ localStorage.setItem(LS.installDismiss,"1"); }catch(e){} }
-    cls.addEventListener("click", dismiss);
-    if(isAndroid){
-      var deferred=null;
-      window.addEventListener("beforeinstallprompt", function(e){
-        e.preventDefault(); deferred=e;
-        txt.textContent="Installa Matty Words sul telefono: si apre a schermo intero, con la sua icona.";
-        btn.hidden=false; bar.hidden=false;
-      });
-      btn.addEventListener("click", function(){
-        if(!deferred) return;
-        deferred.prompt();
-        deferred.userChoice.then(function(){ deferred=null; bar.hidden=true; });
-      });
-      window.addEventListener("appinstalled", function(){ bar.hidden=true; });
-    } else if(isIOS){
+    if(isIOS){
       txt.innerHTML="Per installare l'app: tocca <b>Condividi</b> (riquadro con freccia ⬆️) e poi <b>«Aggiungi a schermata Home»</b>.";
       bar.hidden=false;
     }

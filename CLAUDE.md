@@ -63,15 +63,21 @@ con tocco/Barra. Liste editabili in ⚙: fonemi `ETICHETTA | pronuncia` (es. `M 
 parole `parola | emoji` (l'emoji serve per le carte di f3/f5). Le stesse liste
 alimentano f3/f4/f5. localStorage `aa.phon.v1`, `aa.words.v1`.
 
-## Registro e "termometro" (etica)
+## Registro e "termometro"
 
 Ogni sessione salva: data, fase, prove, riuscite, falsi allarmi, dettaglio
-(es. Ling per suono), **uscita audio usata** e voce. Visibile in ⚙ → Registro,
-**export CSV** per la logopedista. Se le ultime 3 sessioni di detezione hanno 0
-riuscite → nota CALMA che suggerisce di mostrare i dati al centro impianti.
-L'app **non diagnostica mai** ("l'impianto non funziona" è vietato): suggerisce solo
-di parlarne coi professionisti. I dati sono confrontabili solo a parità di
-dispositivo/volume/uscita (avviso nel librino).
+(es. Ling per suono), **uscita audio usata** e voce. Visibile in ⚙ → «Le tue sessioni»,
+con **export** (CSV sotto il cofano, pulsante «⬇️ Salva lo storico»). Se le ultime 3
+sessioni di detezione hanno 0 riuscite → nota CALMA, **non clinica**: suggerisce di
+alzare il volume / usare le cuffie / cambiare uscita (niente «mostra alla logopedista»).
+L'app **non diagnostica mai**.
+
+**Niente gergo clinico nell'interfaccia (regola).** Su richiesta dell'utente l'app NON
+si presenta come strumento medico: nei testi utente niente «tecnico/logopedista/
+audiologo/audiogramma/spettro/Erber/dispositivo medico». Il librino è «📖 Come funziona»
+(spiegazione da gioco). La vecchia prova «Profilo per banda» è ora **«🎚️ Tutti i suoni»**
+(dai gravi agli acuti) — stessa logica, zero gergo. (Il contesto clinico resta solo qui
+nel CLAUDE/README per noi sviluppatori.)
 
 ## Regola di design fondamentale (aggiornata)
 
@@ -94,8 +100,10 @@ sta partendo. Lo stato resta neutro e il riscontro arriva DOPO la risposta.
 - Statico + serverless per **Vercel**, file unico `index.html` (vanilla, no build).
   - `api/tts.js` + `lib/tts.mjs` — TTS neurale **Microsoft** gratuito via `msedge-tts`
     (motore di Edge), **nessuna chiave**. `scripts/dev-server.mjs` per il locale.
-  - **PWA**: `manifest.webmanifest`, `sw.js`, `icons/`; banner d'installazione
-    Android (prompt nativo) e iOS (istruzioni).
+  - **PWA**: `manifest.webmanifest`, `sw.js`, `icons/`. Installazione: **campo in cima
+    a ⚙ Impostazioni** (`installField`/`setupInstallUI`) con prompt nativo a un clic
+    (`beforeinstallprompt` salvato in `pwaDeferred`: Chrome/Edge/Android) o istruzioni
+    native su iOS («Condividi → Aggiungi a Home»). Resta anche il banner in basso.
 - Audio: Web Audio (GainNode = volume ok su iOS; sblocco nel gesto; su iOS "ponte"
   MediaStream→`<audio>` per scegliere l'uscita con AirPlay). Selettore uscita nel
   badge in basso (Chrome: picker nativo; Edge: tendina; iOS: AirPlay).
