@@ -20,9 +20,11 @@ e l'ascolto nel rumore. Nessuna distinzione di età: un'unica app uguale per tut
 L'app è una **mappa di gioco** (una sola schermata, niente scroll) con 6 tappe.
 Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
 
-1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni sintetici simpatici (campanello,
-   clacson, uccellini, toc toc, tamburo, fischio — Web Audio, funzionano offline).
-   Tocca quando senti → si RIVELA chi era (emoji) e vinci la **figurina**. 8 prove.
+1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni sintetici **lunghi e continui**
+   (~2,6s: mucca 🐮, clacson 🚗, campanello 🔔, tamburo-rullo 🥁, uccellini 🐦, fischio 🎶
+   — Web Audio, offline). Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti,
+   non colpi secchi; finestra per rispondere ampia (durata + 2,8s). Tocca quando senti →
+   si RIVELA chi era e vinci la **figurina**. 8 prove.
 2. **f1 — 🎵 Check di Ling** (detezione) — SOLO i 6 suoni di Ling (m·u·a·i·sc·s, voce
    TTS): tocca quando senti la voce. Stelle in base ai sentiti/6.
 3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — due stimoli di fila, rispondi

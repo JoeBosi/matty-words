@@ -722,69 +722,82 @@
     for(var i=0;i<n;i++){ d[i]=Math.sin(2*Math.PI*freq*i/sr); }
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
-  function makeDrum(){
-    var key="drum"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.8), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    for(var h=0;h<3;h++){ var t0=Math.floor(h*0.6*sr), L=Math.floor(sr*0.4);
-      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){ d[idx]+=Math.sin(2*Math.PI*100*t)*Math.exp(-t*11) + (Math.random()*2-1)*0.35*Math.exp(-t*30); } } }
-    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
-  }
-  function makeWhistle(){
-    var key="whistle"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.6), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0), ph=0;
-    for(var i=0;i<n;i++){ var t=i/sr, f=1100+40*Math.sin(2*Math.PI*6*t); ph+=2*Math.PI*f/sr; d[i]=Math.sin(ph); }
-    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
-  }
   // Suona un buffer normalizzandolo. Ritorna la durata in ms.
   function playSound(buf){ ensureAudio(); if(!buf) return 0; playBuffer(buf, null, (buf.__g!=null?buf.__g:normGain(buf))); return buf.duration*1000; }
 
-  // ---- suoni "scoperta" di f0: salienti, simpatici, generati al volo (offline ok) ----
+  // ---- suoni "scoperta" di f0 ----
+  // Regola per la PRIMA tappa (consapevolezza): suoni LUNGHI e CONTINUI (~2,6s di suono
+  // vero, non un colpo secco), così è facile accorgersi che c'è un suono.
+  var F0_DUR = 2.6;
+  // inviluppo morbido attacco/rilascio per evitare click e dare un suono "pieno"
+  function ar(t, dur, atk, rel){ atk=atk||0.04; rel=rel||0.22; var a=t<atk?t/atk:1, r=(dur-t)<rel?(dur-t)/rel:1; return Math.max(0, a*Math.min(1,r)); }
+
   function makeBell(){
     var key="bell"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.5), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    for(var h=0;h<2;h++){ var t0=Math.floor(h*0.55*sr), L=Math.floor(sr*0.7);
-      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){
-        d[idx]+= (Math.sin(2*Math.PI*1320*t)+0.55*Math.sin(2*Math.PI*2640*t)+0.22*Math.sin(2*Math.PI*3980*t))*Math.exp(-t*5.5);
-      } } }
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    for(var i=0;i<n;i++){ var t=i/sr;
+      var env=Math.exp(-t*0.8)*(0.82+0.18*Math.sin(2*Math.PI*5.5*t)); if(t<0.006) env*=t/0.006;  // squillo che dura (decadimento lento)
+      d[i]=(Math.sin(2*Math.PI*1320*t)+0.6*Math.sin(2*Math.PI*2640*t)+0.3*Math.sin(2*Math.PI*3960*t)+0.18*Math.sin(2*Math.PI*5280*t))*env;
+    }
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
   function makeHorn(){
     var key="horn"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.1), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    for(var h=0;h<2;h++){ var t0=Math.floor(h*0.55*sr), L=Math.floor(sr*0.38);
-      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i, env=Math.min(1,i/(sr*0.015))*Math.min(1,(L-i)/(sr*0.03)); if(idx<n){
-        d[idx]+= (Math.sin(2*Math.PI*440*t)+Math.sin(2*Math.PI*554*t)+0.4*Math.sin(2*Math.PI*880*t))*env;
-      } } }
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    var beeps=[[0,1.05],[1.3,1.05]]; // due bip lunghi e sostenuti
+    beeps.forEach(function(b){ var t0=Math.floor(b[0]*sr), L=Math.floor(b[1]*sr);
+      for(var i=0;i<L;i++){ var tau=i/sr, idx=t0+i; if(idx<n){
+        d[idx]+=(Math.sin(2*Math.PI*440*tau)+Math.sin(2*Math.PI*554*tau)+0.4*Math.sin(2*Math.PI*880*tau))*ar(tau,b[1],0.02,0.06);
+      } } });
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
   function makeBirds(){
     var key="birds"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.4), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    var starts=[0, .3, .65, 1.0];
-    starts.forEach(function(st){ var t0=Math.floor(st*sr), L=Math.floor(sr*0.16), ph=0;
-      for(var i=0;i<L;i++){ var t=i/L, idx=t0+i, f=2300+1100*Math.sin(Math.PI*t); ph+=2*Math.PI*f/sr;
-        if(idx<n) d[idx]+= Math.sin(ph)*Math.sin(Math.PI*t); } });
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    var starts=[0,.25,.5,.75,1.0,1.28,1.56,1.84,2.1,2.32]; // cinguettio fitto e continuo
+    starts.forEach(function(st){ var t0=Math.floor(st*sr), L=Math.floor(sr*0.2), ph=0;
+      for(var i=0;i<L;i++){ var tt=i/L, idx=t0+i, f=2200+1300*Math.sin(Math.PI*tt); ph+=2*Math.PI*f/sr;
+        if(idx<n) d[idx]+=Math.sin(ph)*Math.sin(Math.PI*tt); } });
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
-  function makeKnock(){
-    var key="knock"; if(soundCache.has(key)) return soundCache.get(key);
-    var sr=audioCtx.sampleRate, n=Math.floor(sr*1.0), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    [0, .38].forEach(function(st){ var t0=Math.floor(st*sr), L=Math.floor(sr*0.3);
-      for(var i=0;i<L;i++){ var t=i/sr, idx=t0+i; if(idx<n){
-        d[idx]+= Math.sin(2*Math.PI*88*t)*Math.exp(-t*16) + (Math.random()*2-1)*0.35*Math.exp(-t*45);
-      } } });
+  function makeMoo(){   // mucca "muuu": basso, sostenuto → facilissimo da percepire
+    var key="moo"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0), ph=0;
+    for(var i=0;i<n;i++){ var t=i/sr;
+      var f=150-22*(t/dur)+7*Math.sin(2*Math.PI*5*t);     // glissando in giù + vibrato
+      ph+=2*Math.PI*f/sr;
+      var wah=0.7+0.3*Math.sin(2*Math.PI*1.1*t);          // "mmm-ooo"
+      d[i]=(Math.sin(ph)+0.6*Math.sin(2*ph)+0.3*Math.sin(3*ph))*ar(t,dur,0.05,0.25)*wah;
+    }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+  function makeRoll(){  // tamburo: rullo CONTINUO invece di 3 colpi staccati
+    var key="roll"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0);
+    var step=0.08, hl=Math.floor(sr*0.1);
+    for(var st=0; st<dur-0.1; st+=step){ var t0=Math.floor(st*sr);
+      for(var i=0;i<hl;i++){ var tau=i/sr, idx=t0+i; if(idx<n){
+        d[idx]+= (Math.sin(2*Math.PI*110*tau)*Math.exp(-tau*26) + (Math.random()*2-1)*0.4*Math.exp(-tau*55));
+      } } }
+    for(var k=0;k<n;k++){ d[k]*=ar(k/sr,dur,0.03,0.2); }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
+  function makeWhistle(){
+    var key="whistle"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, dur=F0_DUR, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0), ph=0;
+    for(var i=0;i<n;i++){ var t=i/sr, f=1100+120*Math.sin(2*Math.PI*5*t); ph+=2*Math.PI*f/sr; d[i]=Math.sin(ph)*ar(t,dur,0.04,0.18); }
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
 
   // ============================== DEFINIZIONE FASI ==============================
-  // Suoni F0: ognuno ha nome + emoji → al tocco giusto si RIVELA chi era (figurina).
+  // Suoni F0: lunghi e continui; al tocco giusto si RIVELA chi era (figurina).
   var F0_SOUNDS = [
-    {key:"bell",   name:"campanello", emoji:"🔔", fire:function(){ return playSound(makeBell()); }},
-    {key:"horn",   name:"clacson",    emoji:"🚗", fire:function(){ return playSound(makeHorn()); }},
-    {key:"birds",  name:"uccellini",  emoji:"🐦", fire:function(){ return playSound(makeBirds()); }},
-    {key:"knock",  name:"toc toc",    emoji:"🚪", fire:function(){ return playSound(makeKnock()); }},
-    {key:"drum",   name:"tamburo",    emoji:"🥁", fire:function(){ return playSound(makeDrum()); }},
-    {key:"whistle",name:"fischio",    emoji:"🎶", fire:function(){ return playSound(makeWhistle()); }}
+    {key:"moo",    name:"mucca",     emoji:"🐮", fire:function(){ return playSound(makeMoo()); }},
+    {key:"horn",   name:"clacson",   emoji:"🚗", fire:function(){ return playSound(makeHorn()); }},
+    {key:"bell",   name:"campanello",emoji:"🔔", fire:function(){ return playSound(makeBell()); }},
+    {key:"roll",   name:"tamburo",   emoji:"🥁", fire:function(){ return playSound(makeRoll()); }},
+    {key:"birds",  name:"uccellini", emoji:"🐦", fire:function(){ return playSound(makeBirds()); }},
+    {key:"whistle",name:"fischio",   emoji:"🎶", fire:function(){ return playSound(makeWhistle()); }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -900,7 +913,7 @@
     showListen();
     setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
     S.state="waiting"; document.body.setAttribute("data-trial","waiting");
-    var delay = 2000 + Math.random()*4000;
+    var delay = 1500 + Math.random()*3000;
     later(function(){
       if(!S || S.state!=="waiting") return;
       if(Math.random() < (S.phase.catchRate||0)){
@@ -913,7 +926,7 @@
       S.curSnd = snd;
       S.state="sounding"; document.body.setAttribute("data-trial","sounding");
       var dur = snd.fire() || 800;
-      later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 1800);
+      later(function(){ if(S && S.state==="sounding"){ S.misses++; feedback("💤","Questo è passato senza risposta","" ); } }, dur + 2800);
     }, delay);
   }
   function feedback(emo, text, kind){
