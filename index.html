@@ -853,6 +853,14 @@
     for(var i=0;i<n;i++){ var t=i/sr, f=1100+120*Math.sin(2*Math.PI*5*t); ph+=2*Math.PI*f/sr; d[i]=Math.sin(ph)*ar(t,dur,0.04,0.18); }
     fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
   }
+  // fallback generico (un "blip" neutro) per i suoni reali non ancora in cache:
+  // serve solo al primissimo avvio offline, prima che l'mp3 vero sia pronto.
+  function makeBlip(){
+    var key="blip"; if(soundCache.has(key)) return soundCache.get(key);
+    var sr=audioCtx.sampleRate, dur=1.2, n=Math.floor(sr*dur), buf=audioCtx.createBuffer(1,n,sr), d=buf.getChannelData(0), ph=0;
+    for(var i=0;i<n;i++){ var t=i/sr, f=520+80*Math.sin(2*Math.PI*4*t); ph+=2*Math.PI*f/sr; d[i]=Math.sin(ph)*ar(t,dur,0.04,0.2); }
+    fadeEnds(d,sr); buf.__g=normGain(buf); soundCache.set(key,buf); return buf;
+  }
 
   // ============================== DEFINIZIONE FASI ==============================
   // Suoni F0: lunghi e continui; al tocco giusto si RIVELA chi era (figurina).
@@ -864,7 +872,13 @@
     {key:"bell",   name:"campanello",emoji:"🔔", fire:function(){ return f0play("bell",   makeBell);    }},
     {key:"drum",   name:"tamburo",   emoji:"🥁", fire:function(){ return f0play("drum",   makeRoll);    }},
     {key:"birds",  name:"uccellini", emoji:"🐦", fire:function(){ return f0play("birds",  makeBirds);   }},
-    {key:"whistle",name:"fischio",   emoji:"😗", fire:function(){ return f0play("whistle",makeWhistle); }}
+    {key:"whistle",name:"fischio",   emoji:"😗", fire:function(){ return f0play("whistle",makeWhistle); }},
+    {key:"cat",    name:"gatto",     emoji:"🐱", fire:function(){ return f0play("cat",    makeBlip);    }},
+    {key:"dog",    name:"cane",      emoji:"🐶", fire:function(){ return f0play("dog",    makeBlip);    }},
+    {key:"rooster",name:"gallo",     emoji:"🐓", fire:function(){ return f0play("rooster",makeBlip);    }},
+    {key:"duck",   name:"anatra",    emoji:"🦆", fire:function(){ return f0play("duck",   makeBlip);    }},
+    {key:"sheep",  name:"pecora",    emoji:"🐑", fire:function(){ return f0play("sheep",  makeBlip);    }},
+    {key:"phone",  name:"telefono",  emoji:"☎️", fire:function(){ return f0play("phone",  makeBlip);    }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -1146,8 +1160,11 @@
     f2ShowAnswers(false);
     showListen();
     setStatus("wait","Ascolta i due suoni…","🎧");
-    var ix; do { ix=Math.floor(Math.random()*F2_ITEMS.length); } while(F2_ITEMS.length>1 && ix===D.lastIx);
-    D.lastIx=ix; var it = F2_ITEMS[ix];
+    if(!D.bag || !D.bag.length){
+      D.bag = F2_ITEMS.map(function(_,i){return i;}).sort(function(){return Math.random()-0.5;});
+      if(D.lastIx!=null && D.bag.length>1 && D.bag[0]===D.lastIx){ D.bag.push(D.bag.shift()); }
+    }
+    var ix=D.bag.shift(); D.lastIx=ix; var it = F2_ITEMS[ix];
     D.truthSame = Math.random() < 0.5;
     var firstA = Math.random() < 0.5;
     D.s1 = firstA ? it.a : it.b;
@@ -1311,9 +1328,13 @@
   function errAdd(w){ errWords[w]=(errWords[w]||0)+1; persistErr(); }
   function errSub(w){ if(errWords[w]){ errWords[w]--; if(!errWords[w]) delete errWords[w]; persistErr(); } }
   // Sceglie la parola bersaglio: ~50% delle volte ripesca una parola sbagliata in passato.
-  function pickTarget(list, avoidW){
+  function pickTarget(list, avoidW, seen){
     var pool=list.filter(function(x){ return x.w!==avoidW; });
     if(!pool.length) pool=list;
+    if(seen){
+      var unseen=pool.filter(function(x){ return !seen.has(x.w); });
+      if(unseen.length) pool=unseen;   // nella stessa sessione: prima le parole non ancora uscite
+    }
     var toFix=pool.filter(function(x){ return errWords[x.w]>0; });
     if(toFix.length && Math.random()<0.5) return toFix[Math.floor(Math.random()*toFix.length)];
     return pool[Math.floor(Math.random()*pool.length)];
@@ -1335,7 +1356,7 @@
     var p=curPhase; if(!p) return;
     var bank=wordsWithEmoji();
     if(bank.length<4){ setStatus("err","Servono almeno 4 parole con la figura (⚙ → Parole).","⚠️"); return; }
-    I3={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle" };
+    I3={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle", seen:new Set() };
     $("phStart").disabled=false; $("phStart").textContent="🔊 Risenti";
     stage.classList.add("touchable");
     f3Next();
@@ -1349,7 +1370,8 @@
     var nCards = I3.n<=3 ? 2 : I3.n<=7 ? 3 : 4;
     var bank = wordsWithEmoji();
     // bersaglio: adattivo (ripesca gli errori), mai uguale alla prova precedente
-    I3.target = pickTarget(bank, I3.target && I3.target.w);
+    I3.target = pickTarget(bank, I3.target && I3.target.w, I3.seen);
+    I3.seen.add(I3.target.w);
     var target = I3.target;
     // distrattori per somiglianza acustica: prime prove = molto diversi (facile),
     // ultime prove = i più simili al bersaglio (difficile)
@@ -1441,7 +1463,7 @@
     ensureAudio();
     var p=curPhase; if(!p) return;
     if(wordList.length<3){ setStatus("err","Servono almeno 3 parole (⚙ → Parole).","⚠️"); return; }
-    W4={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle" };
+    W4={ phase:p, n:0, ok:0, total:p.trials, target:null, state:"idle", seen:new Set() };
     $("phStart").disabled=false; $("phStart").textContent="🔊 Risenti";
     stage.classList.add("touchable");
     w4Next();
@@ -1452,7 +1474,8 @@
     W4.n++;
     phTrial.textContent="Prova "+W4.n+" di "+W4.total;
     phEmo.style.display=""; showListen();
-    W4.target = pickTarget(wordList, W4.target && W4.target.w);  // adattivo: ripesca gli errori
+    W4.target = pickTarget(wordList, W4.target && W4.target.w, W4.seen);  // adattivo + niente ripetizioni nella sessione
+    W4.seen.add(W4.target.w);
     typeInput.value="";
     typeRow.style.display="flex";
     W4.state="answer";

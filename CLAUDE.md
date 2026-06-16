@@ -20,28 +20,36 @@ e l'ascolto nel rumore. Nessuna distinzione di età: un'unica app uguale per tut
 L'app è una **mappa di gioco** (una sola schermata, niente scroll) con 6 tappe.
 Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
 
-1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni **REALI** (registrazioni vere
-   CC da Wikimedia, ~2–3s in `sounds/*.mp3`: mucca 🐮, clacson 🚗, campanello 🔔,
-   tamburo 🥁, uccellini 🐦, fischio 😗; crediti in `sounds/CREDITS.md`). Le emoji
-   "tornano col suono" (icona = sorgente). Decodificati e normalizzati nella STESSA
-   pipeline degli altri suoni; sintetici (make*) come fallback se il file non è ancora
-   in cache. Caricati in cache PWA + preload all'avvio sessione.
-   **Varietà** (`f0PickVaried`): si pesca da un "sacchetto" mescolato → un giro completo
-   di tutti i suoni prima di ripetere, mai due volte di fila lo stesso. Regola: la PRIMA
-   tappa deve essere FACILE → suoni sostenuti, non colpi secchi; finestra per rispondere
-   ampia (durata + 2,2s). Tocca quando senti → si RIVELA chi era e vinci la **figurina**. 8 prove.
+1. **f0 — 🔔 C'è un suono!** (consapevolezza) — **12 suoni REALI** (registrazioni vere
+   CC da Wikimedia, ~2–2,8s in `sounds/*.mp3`: mucca 🐮, clacson 🚗, campanello 🔔,
+   tamburo 🥁, uccellini 🐦, fischio 😗, gatto 🐱, cane 🐶, gallo 🐓, anatra 🦆, pecora 🐑,
+   telefono ☎️; crediti in `sounds/CREDITS.md`). Le emoji "tornano col suono" (icona =
+   sorgente). Decodificati e normalizzati nella STESSA pipeline degli altri suoni;
+   sintetici (`make*`/`makeBlip` per i nuovi) come fallback se il file non è ancora in
+   cache. Caricati in cache PWA + preload all'avvio sessione.
+   **Varietà** (`f0PickVaried`): si pesca da un "sacchetto" mescolato → con 12 suoni e
+   **8 prove** ogni sessione mostra 8 suoni TUTTI diversi (mai ripetuti); mai due di fila
+   lo stesso. Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti, non colpi
+   secchi; finestra ampia (durata + 2,2s). Tocca quando senti → si RIVELA chi era e vinci
+   la **figurina**. 8 prove.
 2. **f1 — 🎵 Check di Ling** (identificazione) — 6 icone sempre visibili (M·U·A·I·SC·S);
    i 6 suoni di Ling (voce TTS) **girano di continuo** (gap brevi) e si tocca la lettera
    corrispondente. Pick giusto = chip verde; sbagliato = rosso + si rivela quello giusto.
    Tocco sul palco = risenti. Stelle in base ai riconosciuti/6.
 3. **f2 — ⚖️ Uguali o diversi?** (discriminazione) — due stimoli di fila, rispondi
    UGUALI/DIVERSI (pulsanti nella barra comandi). Soprasegmentali + coppie minime TTS.
-   Filotto: 3+ giuste di fila → 🔥. Tocco sul palco = riascolta. 10 prove.
+   Filotto: 3+ giuste di fila → 🔥. Tocco sul palco = riascolta. 10 prove. **Varietà**:
+   "sacchetto" delle coppie (giro completo prima di ripetere, mai due di fila uguali).
 4. **f3 — 👉 Indicalo!** (identificazione) — 2→4 carte con figure (emoji), tocca quella
    detta. 3 volte giusta sulla stessa parola = **la carta entra nell'album**. 10 prove.
+   La carta giusta porta SEMPRE l'emoji della parola detta (icona = suono).
 5. **f4 — ✍️ Scrivilo!** (ascolto aperto, autonomo) — la parola NON si vede: la ascolti
    e la SCRIVI. Confronto tollerante (maiuscole, accenti, 1 lettera nelle parole ≥5).
    Risposta giusta = carta **dorata**. 8 prove. (Sostituisce «Ripeti!»: niente giudice.)
+
+   **Varietà f3/f4** (`pickTarget(list, avoidW, seen)`): oltre all'adattivo (ripesca gli
+   errori), un set `seen` per sessione fa sì che una parola **non si ripeta** finché non
+   sono uscite tutte le altre.
 6. **f5 — 🧠 Capiscilo!** (comprensione, SENZA rumore) — ordini eseguibili verificati
    dall'app: «tocca il gatto», «… e poi il sole». Difficoltà = lunghezza frase (1→3
    elementi), mai il rumore. 8 prove.

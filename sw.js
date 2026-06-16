@@ -5,7 +5,7 @@
 // - NON intercetta le richieste POST (es. /api/tts): vanno sempre in rete; se offline,
 //   l'app ripiega da sola sulla voce del dispositivo.
 
-const VERSION = "v28";
+const VERSION = "v29";
 const SHELL = "shell-" + VERSION;
 const RUNTIME = "runtime-" + VERSION;
 
@@ -24,6 +24,12 @@ const SHELL_ASSETS = [
   "/sounds/drum.mp3",
   "/sounds/birds.mp3",
   "/sounds/whistle.mp3",
+  "/sounds/cat.mp3",
+  "/sounds/dog.mp3",
+  "/sounds/rooster.mp3",
+  "/sounds/duck.mp3",
+  "/sounds/sheep.mp3",
+  "/sounds/phone.mp3",
 ];
 
 self.addEventListener("install", (event) => {
