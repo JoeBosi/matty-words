@@ -120,7 +120,11 @@
   .specbar.s1 .fill{background:var(--play)}
   .specbar.s2 .fill{background:var(--wait)}
   .specbar.active .col{outline:2.5px solid var(--wait);outline-offset:1px;animation:specpulse 1s ease-in-out infinite}
+  /* fascia "dove sta la voce" (gravi/medi): traccia tenue dietro le barre 250–~4k */
+  .specbar.voice .col{background:var(--wait-soft)}
   .specbar .lab{font-size:.58rem;color:var(--muted);font-weight:600;white-space:nowrap}
+  .speechcap{font-size:.74rem;color:var(--muted);text-align:center;max-width:32rem;line-height:1.4;margin-top:.2rem}
+  .speechcap b{color:var(--wait)}
   @keyframes specpulse{0%,100%{outline-color:var(--wait)}50%{outline-color:transparent}}
   @media (prefers-reduced-motion:reduce){.specbar.active .col{animation:none}}
 
@@ -320,6 +324,7 @@
       </div>
       <div class="lingrow" id="lingRow" style="display:none"></div>
       <div class="spectrum" id="spectrum" style="display:none"></div>
+      <div class="speechcap" id="speechCap" style="display:none">La <b>fascia chiara</b> (250 Hz–4 kHz) è dove sta quasi tutta la voce. A destra gli <b>acuti</b> (s · f · sc): deboli, ma servono a capire le parole.</div>
     </div>
 
     <!-- SCHERMATA ALBUM -->
@@ -377,6 +382,40 @@
       </ol>
       <p>C'è anche la <b>Palestra</b> per ascoltare lettere e parole quando si vuole, e
       l'<b>Album</b> con le figurine che si vincono giocando.</p>
+
+      <p><b>🔊 Dov'è la voce?</b> La voce non è tutta uguale: i suoni <b>gravi</b>
+      (le vocali a·o·u) sono <b>forti</b> e facili; i suoni <b>acuti</b> (s·f·sc) sono
+      <b>deboli</b>, ma servono a capire le parole. Nel gioco «🎚️ Tutti i suoni» li ascolti
+      uno alla volta, dal grave all'acuto.</p>
+      <svg viewBox="0 0 480 250" style="width:100%;height:auto;margin:.3rem 0" role="img" aria-label="La voce: forte sui gravi (vocali), debole sugli acuti (consonanti s f sc)">
+        <line x1="26" y1="190" x2="458" y2="190" stroke="var(--line)" stroke-width="1.5"/>
+        <rect x="29"  y="92"  width="30" height="98" rx="4" fill="var(--wait)"/>
+        <rect x="73"  y="70"  width="30" height="120" rx="4" fill="var(--wait)"/>
+        <rect x="117" y="74"  width="30" height="116" rx="4" fill="var(--wait)"/>
+        <rect x="161" y="92"  width="30" height="98" rx="4" fill="var(--wait)"/>
+        <rect x="205" y="110" width="30" height="80" rx="4" fill="var(--wait)"/>
+        <rect x="249" y="126" width="30" height="64" rx="4" fill="var(--play)"/>
+        <rect x="293" y="140" width="30" height="50" rx="4" fill="var(--play)"/>
+        <rect x="337" y="152" width="30" height="38" rx="4" fill="var(--play)"/>
+        <rect x="381" y="160" width="30" height="30" rx="4" fill="var(--play)"/>
+        <rect x="425" y="168" width="30" height="22" rx="4" fill="var(--play)"/>
+        <polyline points="44,92 88,70 132,74 176,92 220,110 264,126 308,140 352,152 396,160 440,168" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4" stroke-linecap="round"/>
+        <g fill="var(--wait)"><rect x="32"  y="14" width="24" height="20" rx="10"/><rect x="58" y="40" width="24" height="20" rx="10"/><rect x="164" y="14" width="24" height="20" rx="10"/><rect x="296" y="14" width="24" height="20" rx="10"/><rect x="324" y="40" width="30" height="20" rx="10"/><rect x="406" y="14" width="24" height="20" rx="10"/></g>
+        <g fill="#fff" font-family="Fredoka,sans-serif" font-weight="600" font-size="12" text-anchor="middle">
+          <text x="44" y="28">M</text><text x="70" y="54">U</text><text x="176" y="28">A</text>
+          <text x="308" y="28">I</text><text x="339" y="54">SC</text><text x="418" y="28">S</text>
+        </g>
+        <g fill="var(--muted)" font-family="Inter,sans-serif" font-size="12" text-anchor="middle">
+          <text x="44" y="208">gravi</text><text x="440" y="208">acuti</text>
+        </g>
+        <rect x="120" y="228" width="12" height="12" rx="2" fill="var(--wait)"/>
+        <text x="138" y="238" fill="var(--muted)" font-family="Inter,sans-serif" font-size="12">vocali (forti)</text>
+        <rect x="250" y="228" width="12" height="12" rx="2" fill="var(--play)"/>
+        <text x="268" y="238" fill="var(--muted)" font-family="Inter,sans-serif" font-size="12">consonanti (deboli)</text>
+      </svg>
+      <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-top:.2rem">I 6 suoni di Ling
+      (M·U·A·I·SC·S) coprono apposta tutto l'arco, dal grave all'acuto.</p>
+
       <p class="info-note">💡 Per ascoltare al meglio: ambiente tranquillo, volume comodo
       e, se aiutano, le cuffie. È un gioco, non un esame: l'importante è divertirsi.</p>
     </div>
@@ -825,7 +864,7 @@
     {key:"bell",   name:"campanello",emoji:"🔔", fire:function(){ return f0play("bell",   makeBell);    }},
     {key:"drum",   name:"tamburo",   emoji:"🥁", fire:function(){ return f0play("drum",   makeRoll);    }},
     {key:"birds",  name:"uccellini", emoji:"🐦", fire:function(){ return f0play("birds",  makeBirds);   }},
-    {key:"whistle",name:"fischio",   emoji:"🎶", fire:function(){ return f0play("whistle",makeWhistle); }}
+    {key:"whistle",name:"fischio",   emoji:"😗", fire:function(){ return f0play("whistle",makeWhistle); }}
   ];
   // 6 suoni di Ling (pronunciati dalla voce TTS).
   var LING = [
@@ -899,6 +938,7 @@
     showPalArrows(false);
     $("ansSame").style.display="none"; $("ansDiff").style.display="none";
     $("spectrum").style.display="none";
+    $("speechCap").style.display="none";
     $("phStart").style.display="flex"; $("phStart").disabled=false;
   }
   function openPhase(p){
@@ -930,12 +970,21 @@
     ensureAudio();
     var p=curPhase; if(!p) return;
     if(p.id==="f0") preloadF0();   // scarica le registrazioni reali mentre parte la sessione
-    S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", curSnd:null };
+    S = { phase:p, n:0, hits:0, fa:0, misses:0, catchOk:0, catchN:0, state:"idle", curSnd:null, bag:[], lastKey:null };
     $("phStart").disabled=true; $("phStart").textContent="In corso…";
     stage.classList.add("touchable");
     showListen();
     setStatus("wait","Tocca lo schermo appena senti un suono","🎧");
     nextTrial();
+  }
+  // varietà dei suoni: si pesca da un "sacchetto" mescolato, così PRIMA si fa un giro
+  // completo di tutti i suoni e solo dopo si ripete; mai due volte di fila lo stesso.
+  function f0PickVaried(){
+    if(!S.bag || !S.bag.length){
+      S.bag = S.phase.sounds.slice().sort(function(){return Math.random()-0.5;});
+      if(S.lastKey && S.bag.length>1 && S.bag[0].key===S.lastKey){ S.bag.push(S.bag.shift()); }
+    }
+    var snd = S.bag.shift(); S.lastKey = snd.key; return snd;
   }
   function nextTrial(){
     if(!S) return;
@@ -954,7 +1003,7 @@
         later(function(){ if(S && S.state==="catch"){ S.catchOk++; feedback("🤫","Bravo: non c'era nessun suono!", "wait"); } }, 2500);
         return;
       }
-      var snd = S.phase.sounds[Math.floor(Math.random()*S.phase.sounds.length)];
+      var snd = f0PickVaried();
       S.curSnd = snd;
       S.state="sounding"; document.body.setAttribute("data-trial","sounding");
       var dur = snd.fire() || 800;
@@ -1097,7 +1146,8 @@
     f2ShowAnswers(false);
     showListen();
     setStatus("wait","Ascolta i due suoni…","🎧");
-    var it = F2_ITEMS[Math.floor(Math.random()*F2_ITEMS.length)];
+    var ix; do { ix=Math.floor(Math.random()*F2_ITEMS.length); } while(F2_ITEMS.length>1 && ix===D.lastIx);
+    D.lastIx=ix; var it = F2_ITEMS[ix];
     D.truthSame = Math.random() < 0.5;
     var firstA = Math.random() < 0.5;
     D.s1 = firstA ? it.a : it.b;
@@ -1695,7 +1745,7 @@
     sp.innerHTML = BANDS.map(function(bd,i){
       var sc = B ? B.scores[i] : 0;
       var h = sc>=2?100 : sc===1?55 : 10;
-      var cls = "specbar" + (sc>=2?" s2":sc===1?" s1":"") + (B && (B.state!=="idle"&&B.state!=="done") && B.curBand===i ? " active":"");
+      var cls = "specbar" + (i<=7?" voice":"") + (sc>=2?" s2":sc===1?" s1":"") + (B && (B.state!=="idle"&&B.state!=="done") && B.curBand===i ? " active":"");
       return '<div class="'+cls+'" data-i="'+i+'" title="Tocca per riascoltare '+bd.lab+' Hz"><div class="col"><div class="fill" style="height:'+h+'%"></div></div><div class="lab">'+bd.lab+'</div></div>';
     }).join("");
     sp.style.display="flex";
@@ -1728,6 +1778,7 @@
     phEmo.style.display="none";
     lingRow.style.display="none";
     B=null; renderSpectrum();
+    $("speechCap").style.display="block";
     $("phStart").style.display="flex"; $("phStart").disabled=false; $("phStart").textContent="Inizia il test";
     stage.classList.remove("touchable");
     setStatus("","Premi «Inizia il test» (meglio se chi ascolta non guarda lo schermo)","👆");
@@ -1899,7 +1950,7 @@
     else if(e.key==="ArrowRight" && P){ e.preventDefault(); palStep(1); }
   });
   var bandMode=false;
-  $("backMap").addEventListener("click", function(){ abortSession(); L=null; bandMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; showMap(); });
+  $("backMap").addEventListener("click", function(){ abortSession(); L=null; bandMode=false; phEmo.style.display=""; phEmo.style.fontSize=""; $("spectrum").style.display="none"; $("speechCap").style.display="none"; showMap(); });
   $("phStart").addEventListener("click", function(){
     if(bandMode){ startBandTest(); return; }
     if(P){ palListen(); return; }

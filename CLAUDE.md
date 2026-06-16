@@ -22,12 +22,14 @@ Si parte direttamente dalla mappa (niente onboarding). Tutto in localStorage.
 
 1. **f0 — 🔔 C'è un suono!** (consapevolezza) — 6 suoni **REALI** (registrazioni vere
    CC da Wikimedia, ~2–3s in `sounds/*.mp3`: mucca 🐮, clacson 🚗, campanello 🔔,
-   tamburo 🥁, uccellini 🐦, fischio 🎶; crediti in `sounds/CREDITS.md`). Decodificati e
-   normalizzati nella STESSA pipeline degli altri suoni; sintetici (make*) come fallback
-   se il file non è ancora in cache. Caricati in cache PWA + preload all'avvio sessione.
-   Regola: la PRIMA tappa deve essere FACILE → suoni sostenuti, non colpi secchi; finestra
-   per rispondere ampia (durata + 2,8s). Tocca quando senti →
-   si RIVELA chi era e vinci la **figurina**. 8 prove.
+   tamburo 🥁, uccellini 🐦, fischio 😗; crediti in `sounds/CREDITS.md`). Le emoji
+   "tornano col suono" (icona = sorgente). Decodificati e normalizzati nella STESSA
+   pipeline degli altri suoni; sintetici (make*) come fallback se il file non è ancora
+   in cache. Caricati in cache PWA + preload all'avvio sessione.
+   **Varietà** (`f0PickVaried`): si pesca da un "sacchetto" mescolato → un giro completo
+   di tutti i suoni prima di ripetere, mai due volte di fila lo stesso. Regola: la PRIMA
+   tappa deve essere FACILE → suoni sostenuti, non colpi secchi; finestra per rispondere
+   ampia (durata + 2,2s). Tocca quando senti → si RIVELA chi era e vinci la **figurina**. 8 prove.
 2. **f1 — 🎵 Check di Ling** (identificazione) — 6 icone sempre visibili (M·U·A·I·SC·S);
    i 6 suoni di Ling (voce TTS) **girano di continuo** (gap brevi) e si tocca la lettera
    corrispondente. Pick giusto = chip verde; sbagliato = rosso + si rivela quello giusto.
@@ -75,9 +77,10 @@ L'app **non diagnostica mai**.
 **Niente gergo clinico nell'interfaccia (regola).** Su richiesta dell'utente l'app NON
 si presenta come strumento medico: nei testi utente niente «tecnico/logopedista/
 audiologo/audiogramma/spettro/Erber/dispositivo medico». Il librino è «📖 Come funziona»
-(spiegazione da gioco). La vecchia prova «Profilo per banda» è ora **«🎚️ Tutti i suoni»**
-(dai gravi agli acuti) — stessa logica, zero gergo. (Il contesto clinico resta solo qui
-nel CLAUDE/README per noi sviluppatori.)
+(spiegazione da gioco, con un **grafico della voce nelle frequenze**). La vecchia prova
+«Profilo per banda» è ora **«🎚️ Tutti i suoni»** (dai gravi agli acuti) — stessa logica,
+zero gergo; evidenzia la fascia 250 Hz–4 kHz come «dove sta la voce» (`.specbar.voice` +
+`#speechCap`). (Il contesto clinico resta solo qui nel CLAUDE/README per noi sviluppatori.)
 
 ## Regola di design fondamentale (aggiornata)
 
